@@ -4,6 +4,8 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.Document;
 
 import nl.inl.blacklab.resultproperty.DocProperty;
@@ -33,6 +35,8 @@ import nl.inl.blacklab.server.search.BlsCacheEntry;
  */
 public class RequestHandlerDocs extends RequestHandler {
     
+    protected static final Logger logger = LogManager.getLogger(RequestHandlerDocs.class);
+    
     public RequestHandlerDocs(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
         super(servlet, request, user, indexName, urlResource, urlPathPart);
@@ -47,6 +51,9 @@ public class RequestHandlerDocs extends RequestHandler {
     
     @Override
     public int handle(DataStream ds) throws BlsException {
+        
+        logger.debug("[1] enter RequestHandlerDocs.handle");
+        
         // Do we want to view a single group after grouping?
         String groupBy = searchParam.getString("group");
         if (groupBy == null)
@@ -59,18 +66,25 @@ public class RequestHandlerDocs extends RequestHandler {
         // Make sure we have the hits search, so we can later determine totals.
         originalHitsSearch = null;
         if (searchParam.hasPattern()) {
+            logger.debug("[2a] pattern given; call SearchManager.searchNonBlocking");
             originalHitsSearch = searchMan.searchNonBlocking(user, searchParam.hitsCount());
+            logger.debug("[2b] call SearchManager.searchNonBlocking");
+        } else {
+            logger.debug("[2c] no pattern given");
         }
         
         if (groupBy.length() > 0 && viewGroup.length() > 0) {
             
             // View a single group in a grouped docs resultset
+            logger.debug("[3a] call doViewGroup");
             response = doViewGroup(ds, viewGroup);
             
         } else {
             // Regular set of docs (no grouping first)
+            logger.debug("[3b] call doRegularDocs");
             response = doRegularDocs(ds);
         }
+        logger.debug("[4] return from RequestHandlerDocs.handle()");
         return response;
     }
 
@@ -124,12 +138,16 @@ public class RequestHandlerDocs extends RequestHandler {
     }
 
     private int doRegularDocs(DataStream ds) throws BlsException {
+        
+        logger.debug("[3.1] get results window");
         BlsCacheEntry<DocResults> searchWindow = searchMan.searchNonBlocking(user, searchParam.docsWindow());
         search = searchWindow;
     
         // Also determine the total number of hits
+        logger.debug("[3.2] get total number of hits");
         BlsCacheEntry<DocResults> total = searchMan.searchNonBlocking(user, searchParam.docs());
         
+        logger.debug("[3.3] wait for window and total searches to start");
         try {
             window = searchWindow.get();
             totalDocResults = total.get();
@@ -139,12 +157,15 @@ public class RequestHandlerDocs extends RequestHandler {
         
         // If "waitfortotal=yes" was passed, block until all results have been fetched
         boolean block = searchParam.getBoolean("waitfortotal");
-        if (block)
+        if (block) {
+            logger.debug("[3.3a] waitfortotal=true; wait until all docs found");
             totalDocResults.size(); // fetch all
+        }
         
         docResults = totalDocResults;
         totalTime = total.threwException() ? -1 : total.timeUserWaited();
         
+        logger.debug("[3.4] call doResponse()");
         return doResponse(ds, false);
 }
 
@@ -155,23 +176,29 @@ public class RequestHandlerDocs extends RequestHandler {
         long totalTokens = -1;
         if (includeTokenCount) {
             // Determine total number of tokens in result set
+            logger.debug("[3.4a] calculate total tokens");
             totalTokens = totalDocResults.tokensInMatchingDocs();
         }
 
         // Search is done; construct the results object
 
+        logger.debug("[3.5] start writing response");
         ds.startMap();
 
         // The summary
         ds.startEntry("summary").startMap();
         ResultCount totalHits;
         try {
+            logger.debug("[3.6] get total hits");
             totalHits = originalHitsSearch == null ? null : originalHitsSearch.get();
         } catch (InterruptedException | ExecutionException e) {
             throw RequestHandler.translateSearchException(e);
         }
+        logger.debug("[3.7] get total docs count");
         ResultCount docsStats = searchMan.search(user, searchParam.docsCount());
+        logger.debug("[3.8a] write summary common fields");
         addSummaryCommonFields(ds, searchParam, search.timeUserWaited(), totalTime, null, window.windowStats());
+        logger.debug("[3.8b] write summary specific fields");
         boolean countFailed = totalTime < 0;
         if (totalHits == null)
             addNumberOfResultsSummaryDocResults(ds, isViewGroup, docResults, countFailed);
@@ -180,6 +207,7 @@ public class RequestHandlerDocs extends RequestHandler {
         if (includeTokenCount)
             ds.entry("tokensInMatchingDocuments", totalTokens);
         ds.startEntry("docFields");
+        logger.debug("[3.9] write doc fields");
         RequestHandler.dataStreamDocFields(ds, blIndex.metadata());
         ds.endEntry();
         ds.endMap().endEntry();
@@ -187,6 +215,7 @@ public class RequestHandlerDocs extends RequestHandler {
         searchLogger.setResultsFound(docsStats.processedSoFar());
 
         // The hits and document info
+        logger.debug("[3.10] write results");
         ds.startEntry("docs").startList();
         for (DocResult result : window) {
             ds.startItem("doc").startMap();
@@ -240,13 +269,16 @@ public class RequestHandlerDocs extends RequestHandler {
             ds.endMap().endItem();
         }
         ds.endList().endEntry();
+        logger.debug("[3.10a] done writing results");
         if (searchParam.hasFacets()) {
+            logger.debug("[3.10b] write facets");
             // Now, group the docs according to the requested facets.
             ds.startEntry("facets");
             dataStreamFacets(ds, totalDocResults, searchParam.facets());
             ds.endEntry();
         }
         ds.endMap();
+        logger.debug("[3.11] return from doResponse()");
         return HTTP_OK;
     }
 
