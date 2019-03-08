@@ -124,7 +124,7 @@ class DocFieldLengthGetter implements Closeable {
      * @param doc the document
      * @return the number of tokens
      */
-    public synchronized int getFieldLength(int doc) {
+    public int getFieldLength(int doc) {
 
         if (useTestValues)
             return 6; // while testing, all documents have same length
