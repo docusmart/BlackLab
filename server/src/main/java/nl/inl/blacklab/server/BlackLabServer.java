@@ -11,12 +11,20 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.*;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.prometheus.client.exporter.common.TextFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -62,6 +70,19 @@ public class BlackLabServer extends HttpServlet {
     private LogDatabase logDatabase = new LogDatabaseDummy();
 
     private boolean configRead = false;
+
+    /** Registry for metrics */
+    private final static CompositeMeterRegistry registry = new CompositeMeterRegistry();
+    static {
+        registry.add(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
+        new ClassLoaderMetrics().bindTo(registry);
+        new JvmMemoryMetrics().bindTo(registry);
+        new JvmGcMetrics().bindTo(registry);
+        new JvmHeapPressureMetrics().bindTo(registry);
+        new JvmThreadMetrics().bindTo(registry);
+        new ProcessorMetrics().bindTo(registry);
+        new JvmInfoMetrics().bindTo(registry);
+    }
 
     @Override
     public void init() throws ServletException {
@@ -175,7 +196,24 @@ public class BlackLabServer extends HttpServlet {
         }
     }
 
-	private void handleRequest(HttpServletRequest request, HttpServletResponse responseObject) {
+    protected void handlePrometheus(HttpServletResponse responseObject) {
+        Optional<PrometheusMeterRegistry> reg = registry.getRegistries().stream()
+                .filter(r -> r instanceof PrometheusMeterRegistry)
+                .map(t -> (PrometheusMeterRegistry) t)
+                .findFirst();
+        reg.ifPresent((PrometheusMeterRegistry registry) -> {
+            try {
+                registry.scrape(responseObject.getWriter());
+                responseObject.setStatus(HttpServletResponse.SC_OK);
+                responseObject.setCharacterEncoding(OUTPUT_ENCODING.name().toLowerCase());
+                responseObject.setContentType(TextFormat.CONTENT_TYPE_004);
+            } catch (IOException exception) {
+                logger.error("Cant scrape prometheus metrics", exception);
+            }
+        });
+    }
+
+    private void handleRequest(HttpServletRequest request, HttpServletResponse responseObject) {
             try {
                 request.setCharacterEncoding("utf-8");
             } catch (UnsupportedEncodingException ex) {
@@ -186,6 +224,12 @@ public class BlackLabServer extends HttpServlet {
             request.setCharacterEncoding("utf-8");
         } catch (UnsupportedEncodingException ex) {
             logger.error(ex);
+        }
+
+	    // Metrics scrapping endpoint
+	    if (request.getRequestURI().contains("/metrics")) {
+	        handlePrometheus(responseObject);
+	        return;
         }
 
         synchronized (this) {

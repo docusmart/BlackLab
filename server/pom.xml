@@ -253,7 +253,19 @@
             <artifactId>commons-dbcp</artifactId>
             <version>1.4</version>
         </dependency>
-                
+        <!-- for metrics -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <version>1.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <version>1.7.0</version>
+        </dependency>
+
+
     </dependencies>
 
     <reporting>
