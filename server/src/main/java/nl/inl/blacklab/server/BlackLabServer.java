@@ -18,6 +18,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.sun.tools.javac.code.Attribute;
+import io.micrometer.cloudwatch.CloudWatchMeterRegistry;
+import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.*;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
@@ -49,6 +52,8 @@ import nl.inl.blacklab.server.requesthandlers.Response;
 import nl.inl.blacklab.server.requesthandlers.SearchParameters;
 import nl.inl.blacklab.server.search.SearchManager;
 import nl.inl.blacklab.server.util.ServletUtil;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 
 public class BlackLabServer extends HttpServlet {
     
@@ -84,6 +89,12 @@ public class BlackLabServer extends HttpServlet {
         new JvmInfoMetrics().bindTo(registry);
     }
 
+    private static CloudWatchAsyncClient createClient() {
+        return CloudWatchAsyncClient
+                .builder()
+                .region(Region.US_WEST_2)
+                .build();
+    }
     @Override
     public void init() throws ServletException {
         // Default init if no log4j.properties found
