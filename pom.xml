@@ -20,6 +20,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <doclint>none</doclint>
+        <graalvm.version>21.1.0</graalvm.version>
+        <tomcat.version>10.0.6</tomcat.version>
     </properties>
 
     <licenses>

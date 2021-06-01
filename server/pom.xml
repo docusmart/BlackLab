@@ -9,7 +9,7 @@
         <version>2.2.0-SNAPSHOT</version>
     </parent>
     <artifactId>blacklab-server</artifactId>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
 
     <name>BlackLab Server</name>
     <description>BlackLab Server is a REST webservice on top of corpus search engine BlackLab. It allows you to use BlackLab from any programming language.</description>
@@ -29,7 +29,9 @@
     <build>
 
         <pluginManagement>
+
             <plugins>
+
                 <plugin>
                     <groupId>com.ruleoftech</groupId>
                     <artifactId>markdown-page-generator-plugin</artifactId>
@@ -51,6 +53,29 @@
         </pluginManagement>
 
         <plugins>
+            <plugin>
+                <groupId>org.graalvm.nativeimage</groupId>
+                <artifactId>native-image-maven-plugin</artifactId>
+                <version>${graalvm.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>native-image</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>false</skip>
+                    <imageName>blacklab-server</imageName>
+                    <mainClass>nl.inl.blacklab.server.Main</mainClass>
+                    <buildArgs>
+                        --no-fallback
+                        --verbose
+                    </buildArgs>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.mortbay.jetty</groupId>
                 <artifactId>maven-jetty-plugin</artifactId>
@@ -83,7 +108,15 @@
                     <autoReleaseAfterClose>false</autoReleaseAfterClose>
                 </configuration>
             </plugin>
-            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>10</source>
+                    <target>10</target>
+                </configuration>
+            </plugin>
+
         </plugins>
 
         <!-- <finalName>blacklab-server</finalName> -->
@@ -253,7 +286,32 @@
             <artifactId>commons-dbcp</artifactId>
             <version>1.4</version>
         </dependency>
-                
+        <dependency>
+            <groupId>org.graalvm.sdk</groupId>
+            <artifactId>graal-sdk</artifactId>
+            <version>${graalvm.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- tomcat embedded -->
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <version>${tomcat.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-jasper</artifactId>
+            <version>${tomcat.version}</version>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-logging-juli</artifactId>
+            <version>${tomcat.version}</version>
+        </dependency>
+        -->
+
     </dependencies>
 
     <reporting>
