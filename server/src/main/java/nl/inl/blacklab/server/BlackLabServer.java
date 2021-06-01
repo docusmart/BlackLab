@@ -11,23 +11,12 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.sun.tools.javac.code.Attribute;
-import io.micrometer.cloudwatch.CloudWatchMeterRegistry;
-import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.*;
-import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.exporter.common.TextFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -52,8 +41,6 @@ import nl.inl.blacklab.server.requesthandlers.Response;
 import nl.inl.blacklab.server.requesthandlers.SearchParameters;
 import nl.inl.blacklab.server.search.SearchManager;
 import nl.inl.blacklab.server.util.ServletUtil;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 
 public class BlackLabServer extends HttpServlet {
     
@@ -76,25 +63,6 @@ public class BlackLabServer extends HttpServlet {
 
     private boolean configRead = false;
 
-    /** Registry for metrics */
-    private final static CompositeMeterRegistry registry = new CompositeMeterRegistry();
-    static {
-        registry.add(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
-        new ClassLoaderMetrics().bindTo(registry);
-        new JvmMemoryMetrics().bindTo(registry);
-        new JvmGcMetrics().bindTo(registry);
-        new JvmHeapPressureMetrics().bindTo(registry);
-        new JvmThreadMetrics().bindTo(registry);
-        new ProcessorMetrics().bindTo(registry);
-        new JvmInfoMetrics().bindTo(registry);
-    }
-
-    private static CloudWatchAsyncClient createClient() {
-        return CloudWatchAsyncClient
-                .builder()
-                .region(Region.US_WEST_2)
-                .build();
-    }
     @Override
     public void init() throws ServletException {
         // Default init if no log4j.properties found
@@ -207,24 +175,7 @@ public class BlackLabServer extends HttpServlet {
         }
     }
 
-    protected void handlePrometheus(HttpServletResponse responseObject) {
-        Optional<PrometheusMeterRegistry> reg = registry.getRegistries().stream()
-                .filter(r -> r instanceof PrometheusMeterRegistry)
-                .map(t -> (PrometheusMeterRegistry) t)
-                .findFirst();
-        reg.ifPresent((PrometheusMeterRegistry registry) -> {
-            try {
-                registry.scrape(responseObject.getWriter());
-                responseObject.setStatus(HttpServletResponse.SC_OK);
-                responseObject.setCharacterEncoding(OUTPUT_ENCODING.name().toLowerCase());
-                responseObject.setContentType(TextFormat.CONTENT_TYPE_004);
-            } catch (IOException exception) {
-                logger.error("Cant scrape prometheus metrics", exception);
-            }
-        });
-    }
-
-    private void handleRequest(HttpServletRequest request, HttpServletResponse responseObject) {
+	private void handleRequest(HttpServletRequest request, HttpServletResponse responseObject) {
             try {
                 request.setCharacterEncoding("utf-8");
             } catch (UnsupportedEncodingException ex) {
@@ -237,9 +188,8 @@ public class BlackLabServer extends HttpServlet {
             logger.error(ex);
         }
 
-	    // Metrics scrapping endpoint
-	    if (request.getRequestURI().contains("/metrics")) {
-	        handlePrometheus(responseObject);
+	    //Respond to prometheus requests.
+	    if (Metrics.handlePrometheus(request, responseObject)) {
 	        return;
         }
 
