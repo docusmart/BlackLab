@@ -68,6 +68,37 @@
 
         <plugins>
 
+
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <dependencies>
+                    <!-- This dependency is required by TeaVM to emulate subset of Java class library -->
+                    <dependency>
+                        <groupId>org.teavm</groupId>
+                        <artifactId>teavm-classlib</artifactId>
+                        <version>0.6.1</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <phase>process-classes</phase>
+                        <configuration>
+                            <mainClass>nl.inl.blacklab.queryParser.corpusql.SimpleTestParser</mainClass>
+                            <mainPageIncluded>true</mainPageIncluded>
+                            <debugInformationGenerated>true</debugInformationGenerated>
+                            <sourceMapsGenerated>true</sourceMapsGenerated>
+                            <sourceFilesCopied>true</sourceFilesCopied>
+                            <minifying>false</minifying>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Copies dependencies to target/lib, so we can run programs
                 from blacklab.jar -->
             <plugin>
