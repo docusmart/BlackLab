@@ -46,6 +46,7 @@ public class Metrics {
     }
 
     private static CloudWatchAsyncClient createCloudWatchClient() {
+        System.setProperty("io.netty.tryReflectionSetAccessible", "false");
         return CloudWatchAsyncClient
                 .builder()
                 .region(Region.US_WEST_2)
@@ -56,6 +57,8 @@ public class Metrics {
         final Map<String, String> props = new HashMap<>();
         props.put("cloudwatch.namespace", System.getProperty(CW_NAMESPACE_PROPERTY, CW_NAMESPACE));
         props.put("cloudwatch.step", Duration.ofMinutes(1).toString());
+        props.put("cloudwatch.batchSize", String.format("%d", CloudWatchConfig.MAX_BATCH_SIZE));
+
         return new CloudWatchConfig() {
             @Override
             public String get(String key) {
