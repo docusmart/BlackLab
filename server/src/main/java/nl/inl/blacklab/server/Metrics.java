@@ -37,7 +37,11 @@ public class Metrics {
     private static final Logger logger = LogManager.getLogger(Metrics.class);
     static final String CW_NAMESPACE = "Application";
     static final String CW_NAMESPACE_PROPERTY = "metrics.cloudwatch.namespace";
+    static final String METRICS_ENABLED = "metrics.enabled";
 
+    /**
+     * CustomCWClient injects base dimensions to all metrics published to CloudWatch
+     */
     private static class CustomCWClient implements CloudWatchAsyncClient {
         private final CloudWatchAsyncClient client = CloudWatchAsyncClient.builder().build();
         private final List<Dimension> hostDimensions = new ArrayList<>();
@@ -93,16 +97,22 @@ public class Metrics {
     /**
      * Registry for metrics. Define to metrics backend
      **/
-    final static CompositeMeterRegistry registry = new CompositeMeterRegistry();
+    final static CompositeMeterRegistry metricsRegistry = init();
 
-    static {
-        registry.add(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
-        logger.info("Publishing metrics to Prometheus");
+    private static CompositeMeterRegistry init() {
+        CompositeMeterRegistry registry = new CompositeMeterRegistry();
+        if (!metricsEnabled()) {
+            logger.info("Metrics are disabled. No metrics will be published.");
+            return registry;
+        }
+
 
         // Add cloudwatch metrics on ec2 instances only
         Optional<Map<String, String>> tags = getInstanceTags();
         if (!tags.isPresent()) {
             logger.info("No EC2 information. Will not publish metrics to CloudWatch");
+            registry.add(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
+            logger.info("Publishing metrics to Prometheus");
         } else {
             logger.info("Found EC2 information. Will publish to CloudWatch");
             registry.add(new CloudWatchMeterRegistry(cloudWatchConfig(), Clock.SYSTEM, new CustomCWClient(tags.get())));
@@ -113,14 +123,13 @@ public class Metrics {
         new JvmHeapPressureMetrics().bindTo(registry);
         new JvmThreadMetrics().bindTo(registry);
         new ProcessorMetrics().bindTo(registry);
+        return registry;
     }
 
-    private static CloudWatchAsyncClient createCloudWatchClient() {
-        System.setProperty("io.netty.tryReflectionSetAccessible", "false");
-        return CloudWatchAsyncClient
-                .builder()
-                .region(Region.US_WEST_2)
-                .build();
+    public static boolean metricsEnabled() {
+        String result = System.getProperty(METRICS_ENABLED, "true");
+        boolean disabled = result.equalsIgnoreCase("false");
+        return !disabled;
     }
 
     private static CloudWatchConfig cloudWatchConfig(){
@@ -174,7 +183,7 @@ public class Metrics {
             return false;
         }
 
-        Optional<PrometheusMeterRegistry> reg = registry.getRegistries().stream()
+        Optional<PrometheusMeterRegistry> reg = metricsRegistry.getRegistries().stream()
                 .filter(r -> r instanceof PrometheusMeterRegistry)
                 .map(t -> (PrometheusMeterRegistry) t)
                 .findFirst();
@@ -185,7 +194,7 @@ public class Metrics {
                 responseObject.setCharacterEncoding(BlackLabServer.OUTPUT_ENCODING.name().toLowerCase());
                 responseObject.setContentType(TextFormat.CONTENT_TYPE_004);
             } catch (IOException exception) {
-                logger.error("Cant scrape prometheus metrics", exception);
+                logger.error("Can't scrape prometheus metrics", exception);
             }
         });
         return true;
