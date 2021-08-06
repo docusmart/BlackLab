@@ -440,7 +440,7 @@ public abstract class RequestHandler {
         if (!(this instanceof RequestHandlerStaticResponse) && !pathAndQueryString.startsWith("/cache-info")) { // annoying when monitoring
             String requestId = request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
             if (requestId == null) {
-                requestId = "";
+                requestId = "unknown";
             }
             String requestIdInfo  = String.format("RequestId:%s", requestId);
             logger.info(ServletUtil.shortenIpv6(requestIdInfo + " " + request.getRemoteAddr()) + " " + user.uniqueIdShort() + " "
