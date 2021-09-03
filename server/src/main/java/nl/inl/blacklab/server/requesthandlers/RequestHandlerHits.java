@@ -1,14 +1,15 @@
 package nl.inl.blacklab.server.requesthandlers;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import nl.inl.blacklab.requestlogging.LogLevel;
+import nl.inl.blacklab.server.Metrics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.document.Document;
@@ -64,6 +65,7 @@ public class RequestHandlerHits extends RequestHandler {
             String urlResource, String urlPathPart) {
         super(servlet, request, user, indexName, urlResource, urlPathPart);
     }
+
 
     @Override
     public int handle(DataStream ds) throws BlsException {
@@ -133,9 +135,9 @@ public class RequestHandlerHits extends RequestHandler {
 
             // Since we're going to always launch a totals count anyway, just do it right away
             // then construct a window on top of the total
-            hits = searchMan.search(user, searchParam.hitsSample());
+            hits = searchMan.search(user, searchParam.hitsSample()); //blocking
             job = searchMan.searchNonBlocking(user, searchParam.hitsCount()); // always launch totals nonblocking!
-            docsCount = searchMan.search(user, searchParam.docsCount());
+            docsCount = searchMan.search(user, searchParam.docsCount()); //blocks
             try {
                 hitsCount = (ResultCount) job.get();
             } catch (InterruptedException | ExecutionException e) {
@@ -193,6 +195,11 @@ public class RequestHandlerHits extends RequestHandler {
         ds.startEntry("summary").startMap();
 
         long totalTime = job.threwException() ? -1 : job.timeUserWaited();
+        int numDocs = searchParam.getNumberOfDocs();
+        Tags numberOfDocs = Tags.of("numberOfDocs", String.format("%d", numDocs));
+        Timer timerMetric = Metrics.creatTimer("TotalTimeHits",
+                "Total time to execute Hits search request", numberOfDocs);
+        timerMetric.record(totalTime, TimeUnit.MILLISECONDS);
 
         // TODO timing is now broken because we always retrieve total and use a window on top of it,
         // so we can no longer differentiate the total time from the time to retrieve the requested window

@@ -12,6 +12,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -231,6 +235,19 @@ public class SearchParameters {
             logger.debug("Illegal integer value for parameter '" + name + "': " + value);
             return 0;
         }
+    }
+
+    public int getNumberOfDocs() {
+        String filter = getString("filter");
+        if (StringUtils.isBlank(filter)) {
+            return 0;
+        }
+        Pattern patt =  Pattern.compile("(docId:\\p{Graph}+)+");
+        List<String> allDocs = patt.matcher(filter)
+                .results()
+                .map(MatchResult::group)
+                .collect(Collectors.toList());
+        return allDocs.size();
     }
 
     public long getLong(String name) {
