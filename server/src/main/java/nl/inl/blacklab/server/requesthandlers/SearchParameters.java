@@ -243,11 +243,12 @@ public class SearchParameters {
             return 0;
         }
         Pattern patt =  Pattern.compile("(docId:\\p{Graph}+)+");
-        List<String> allDocs = patt.matcher(filter)
-                .results()
-                .map(MatchResult::group)
-                .collect(Collectors.toList());
-        return allDocs.size();
+        List<String> allResults = new ArrayList<>();
+        for (MatchResult result : patt.matcher(filter).results()
+                .collect(Collectors.toList())) {
+           allResults.add(result.group());
+        }
+        return allResults.size();
     }
 
     public long getLong(String name) {
