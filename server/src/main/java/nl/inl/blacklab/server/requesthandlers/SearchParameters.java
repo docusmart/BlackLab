@@ -242,7 +242,9 @@ public class SearchParameters {
         if (StringUtils.isBlank(filter)) {
             return 0;
         }
+        System.out.println(filter);
         Pattern patt =  Pattern.compile("(docId:\\p{Graph}+)+");
+        //Pattern patt =  Pattern.compile("docId:(\\p{Graph}+)+");
         List<String> allResults = new ArrayList<>();
         for (MatchResult result : patt.matcher(filter).results()
                 .collect(Collectors.toList())) {
