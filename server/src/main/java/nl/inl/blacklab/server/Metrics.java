@@ -217,7 +217,7 @@ public class Metrics {
     }
 
     public static <T> ToDoubleFunction<T> toDoubleFn(ToLongFunction<T> intGenerator) {
-        return  (T obj) -> (float) intGenerator.applyAsLong(obj);
+        return  (T obj) -> (double) intGenerator.applyAsLong(obj);
     }
     public static <T> Gauge createGauge(String name, String description, Tags tags, T obj, ToDoubleFunction<T> f) {
         return Gauge.builder(name, obj, f)
