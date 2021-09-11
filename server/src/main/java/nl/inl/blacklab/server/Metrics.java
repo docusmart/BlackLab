@@ -2,9 +2,7 @@ package nl.inl.blacklab.server;
 
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
-import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.*;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
@@ -34,8 +32,12 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
 
 public class Metrics {
     private static final Logger logger = LogManager.getLogger(Metrics.class);
@@ -211,6 +213,16 @@ public class Metrics {
                 .tags(tags)
                 .publishPercentiles(0.5, 0.9,0.99)
                 .publishPercentileHistogram()
+                .register(Metrics.metricsRegistry);
+    }
+
+    public static <T> ToDoubleFunction<T> toDoubleFn(ToLongFunction<T> intGenerator) {
+        return  (T obj) -> (float) intGenerator.applyAsLong(obj);
+    }
+    public static <T> Gauge createGauge(String name, String description, Tags tags, T obj, ToDoubleFunction<T> f) {
+        return Gauge.builder(name, obj, f)
+                .description(description)
+                .tags(tags)
                 .register(Metrics.metricsRegistry);
     }
 }
