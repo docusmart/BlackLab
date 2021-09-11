@@ -211,8 +211,6 @@ public class Metrics {
         return Timer.builder(name)
                 .description(description)
                 .tags(tags)
-                .publishPercentiles(0.5, 0.9,0.99)
-                .publishPercentileHistogram()
                 .register(Metrics.metricsRegistry);
     }
 
