@@ -202,7 +202,7 @@ public class RequestHandlerHits extends RequestHandler {
                     "Total time to execute Hits search request", numberOfDocs);
             timerMetric.record(totalTime, TimeUnit.MILLISECONDS);
         }
-        logger.info(String.format("Total execution time is: %d and docs: %d", totalTime, numDocs));
+        logger.info(String.format("Total execution time is: %d and docs: %d",  totalTime, numDocs));
 
         // TODO timing is now broken because we always retrieve total and use a window on top of it,
         // so we can no longer differentiate the total time from the time to retrieve the requested window

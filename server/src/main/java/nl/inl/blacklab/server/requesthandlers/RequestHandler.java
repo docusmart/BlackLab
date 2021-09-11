@@ -2,14 +2,8 @@ package nl.inl.blacklab.server.requesthandlers;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -20,6 +14,7 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.lucene.document.Document;
 
 import nl.inl.blacklab.exceptions.BlackLabException;
@@ -438,12 +433,8 @@ public abstract class RequestHandler {
         String pathAndQueryString = ServletUtil.getPathAndQueryString(request);
 
         if (!(this instanceof RequestHandlerStaticResponse) && !pathAndQueryString.startsWith("/cache-info")) { // annoying when monitoring
-            String requestId = request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
-            if (requestId == null) {
-                requestId = "unknown";
-            }
-            String requestIdInfo  = String.format("RequestId:%s", requestId);
-            logger.info(ServletUtil.shortenIpv6(requestIdInfo + " " + request.getRemoteAddr()) + " " + user.uniqueIdShort() + " "
+            setRequestIds();
+            logger.info(ServletUtil.shortenIpv6(request.getRemoteAddr()) + " " + user.uniqueIdShort() + " "
                     + request.getMethod() + " " + pathAndQueryString);
         }
 
@@ -454,6 +445,16 @@ public abstract class RequestHandler {
         this.urlPathInfo = urlPathInfo;
         this.user = user;
 
+    }
+
+    private void setRequestIds() {
+        String requestId= request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
+        if (requestId == null) {
+            requestId = "unknown";
+        }
+        String b64uuid = Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes());
+        requestId = String.format("%s/%s", requestId, b64uuid);
+        ThreadContext.put("requestId", requestId);
     }
 
     public void cleanup() {
