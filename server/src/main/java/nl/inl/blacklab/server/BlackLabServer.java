@@ -11,12 +11,18 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import nl.inl.blacklab.requestlogging.LogLevel;
+import nl.inl.blacklab.requestlogging.SearchLogger;
+import nl.inl.blacklab.search.results.SearchResult;
+import nl.inl.blacklab.server.logging.*;
+import nl.inl.blacklab.server.search.BlsCacheEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,9 +38,6 @@ import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.exceptions.ConfigurationException;
 import nl.inl.blacklab.server.exceptions.InternalServerError;
-import nl.inl.blacklab.server.logging.LogDatabase;
-import nl.inl.blacklab.server.logging.LogDatabaseDummy;
-import nl.inl.blacklab.server.logging.LogDatabaseImpl;
 import nl.inl.blacklab.server.requesthandlers.ElementNames;
 import nl.inl.blacklab.server.requesthandlers.RequestHandler;
 import nl.inl.blacklab.server.requesthandlers.Response;
@@ -111,6 +114,53 @@ public class BlackLabServer extends HttpServlet {
                     Class.forName("org.sqlite.JDBC");
                     logDatabase = new LogDatabaseImpl(url);
                     searchManager.setLogDatabase(logDatabase);
+                } else {
+                    LogDatabase ld = new LogDatabase() {
+                        @Override
+                        public List<Request> getRequests(long from, long to) {
+                            return null;
+                        }
+
+                        @Override
+                        public List<CacheStats> getCacheStats(long from, long to) {
+                            return null;
+                        }
+
+                        @Override
+                        public void close() throws IOException {
+
+                        }
+
+                        @Override
+                        public SearchLogger addRequest(String corpus, String type, Map<String, String[]> parameters) {
+                            return new SearchLogger() {
+                                @Override
+                                public void log(LogLevel level, String line) {
+                                    if (level != LogLevel.BASIC) {
+                                        return;
+                                    }
+                                   BlackLabServer.logger.info(line);
+                                }
+
+                                @Override
+                                public void setResultsFound(int resultsFound) {
+
+                                }
+
+                                @Override
+                                public void close() throws IOException {
+
+                                }
+                            };
+                        }
+
+                        @Override
+                        public void addCacheInfo(List<BlsCacheEntry<? extends SearchResult>> snapshot, int numberOfSearches, int numberRunning, int numberPaused, long sizeBytes, long freeMemoryBytes, long largestEntryBytes, int oldestEntryAgeSec) {
+
+                        }
+                    };
+                    searchManager.setLogDatabase(ld);
+                    this.logDatabase = ld;
                 }
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException("Error opening log database", e);
