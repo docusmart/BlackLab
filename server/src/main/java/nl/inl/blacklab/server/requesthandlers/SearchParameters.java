@@ -242,7 +242,7 @@ public class SearchParameters {
         if (StringUtils.isBlank(filter)) {
             return 0;
         }
-        //Pattern patt =  Pattern.compile("(docId:\\p{Graph}+)+");
+        //Experiment with this regex as well "(docId:\\p{Graph}+)+"
         Pattern patt = Pattern.compile("([a-f0-9-]+[)|\\s])+");
         List<String> allResults = new ArrayList<>();
         for (MatchResult result : patt.matcher(filter).results()

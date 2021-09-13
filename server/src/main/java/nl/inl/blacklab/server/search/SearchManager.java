@@ -19,12 +19,8 @@ import nl.inl.blacklab.server.jobs.User;
 import nl.inl.blacklab.server.logging.LogDatabase;
 import nl.inl.blacklab.server.requesthandlers.SearchParameters;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Queue;
-import java.util.concurrent.*;
-import java.util.function.ToDoubleFunction;
-import java.util.function.ToIntFunction;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 public class SearchManager {
 
@@ -76,16 +72,7 @@ public class SearchManager {
     }
 
     private void startMonitoringOfThreadPools(BlackLabEngine blackLab) {
-        //publishInitExecServiceQueueSize(blackLab.initializationExecutorService());
         publishSearchExecutorsQueueSize(blackLab.searchExecutorService());
-    }
-
-    private void publishInitExecServiceQueueSize(ExecutorService initializationExecutorService) {
-        assert initializationExecutorService instanceof ThreadPoolExecutor;
-        ThreadPoolExecutor executorService = (ThreadPoolExecutor) initializationExecutorService;
-        Collection<?> queue =  executorService.getQueue();
-        Metrics.createGauge("InitializationExecutorQueueLen", "A metric that tracks the queue length of the " +
-                "initializationExecutorService", Tags.empty(), queue, Metrics.toDoubleFn(Collection::size));
     }
 
     private void publishSearchExecutorsQueueSize(ExecutorService searchExecutorService) {
