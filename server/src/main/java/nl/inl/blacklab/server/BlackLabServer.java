@@ -11,18 +11,16 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import nl.inl.blacklab.requestlogging.LogLevel;
-import nl.inl.blacklab.requestlogging.SearchLogger;
-import nl.inl.blacklab.search.results.SearchResult;
-import nl.inl.blacklab.server.logging.*;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
+import nl.inl.blacklab.server.logging.ConsoleLogDatabase;
+import nl.inl.blacklab.server.logging.LogDatabase;
+import nl.inl.blacklab.server.logging.LogDatabaseDummy;
+import nl.inl.blacklab.server.logging.LogDatabaseImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

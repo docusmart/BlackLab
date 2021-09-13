@@ -1,6 +1,9 @@
 package nl.inl.blacklab.server.requesthandlers;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -135,9 +138,9 @@ public class RequestHandlerHits extends RequestHandler {
 
             // Since we're going to always launch a totals count anyway, just do it right away
             // then construct a window on top of the total
-            hits = searchMan.search(user, searchParam.hitsSample()); //blocking
+            hits = searchMan.search(user, searchParam.hitsSample());
             job = searchMan.searchNonBlocking(user, searchParam.hitsCount()); // always launch totals nonblocking!
-            docsCount = searchMan.search(user, searchParam.docsCount()); //blocks
+            docsCount = searchMan.search(user, searchParam.docsCount());
             try {
                 hitsCount = (ResultCount) job.get();
             } catch (InterruptedException | ExecutionException e) {
