@@ -107,6 +107,8 @@ public class BlackLabServer extends HttpServlet {
 
             // Open log database
             try {
+                logDatabase = new ConsoleLogDatabase(BlackLabServer.logger);
+                searchManager.setLogDatabase(logDatabase);
                 String sqliteDatabase = searchManager.config().getLog().getSqliteDatabase();
                 if (sqliteDatabase != null) {
                     File dbFile = new File(sqliteDatabase);
@@ -114,53 +116,6 @@ public class BlackLabServer extends HttpServlet {
                     Class.forName("org.sqlite.JDBC");
                     logDatabase = new LogDatabaseImpl(url);
                     searchManager.setLogDatabase(logDatabase);
-                } else {
-                    LogDatabase ld = new LogDatabase() {
-                        @Override
-                        public List<Request> getRequests(long from, long to) {
-                            return null;
-                        }
-
-                        @Override
-                        public List<CacheStats> getCacheStats(long from, long to) {
-                            return null;
-                        }
-
-                        @Override
-                        public void close() throws IOException {
-
-                        }
-
-                        @Override
-                        public SearchLogger addRequest(String corpus, String type, Map<String, String[]> parameters) {
-                            return new SearchLogger() {
-                                @Override
-                                public void log(LogLevel level, String line) {
-                                    if (level != LogLevel.BASIC) {
-                                        return;
-                                    }
-                                   BlackLabServer.logger.info(line);
-                                }
-
-                                @Override
-                                public void setResultsFound(int resultsFound) {
-
-                                }
-
-                                @Override
-                                public void close() throws IOException {
-
-                                }
-                            };
-                        }
-
-                        @Override
-                        public void addCacheInfo(List<BlsCacheEntry<? extends SearchResult>> snapshot, int numberOfSearches, int numberRunning, int numberPaused, long sizeBytes, long freeMemoryBytes, long largestEntryBytes, int oldestEntryAgeSec) {
-
-                        }
-                    };
-                    searchManager.setLogDatabase(ld);
-                    this.logDatabase = ld;
                 }
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException("Error opening log database", e);
