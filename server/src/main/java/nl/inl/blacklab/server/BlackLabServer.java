@@ -105,7 +105,7 @@ public class BlackLabServer extends HttpServlet {
 
             // Open log database
             try {
-                logDatabase = new ConsoleLogDatabase(BlackLabServer.logger);
+                logDatabase = new ConsoleLogDatabase();
                 searchManager.setLogDatabase(logDatabase);
                 String sqliteDatabase = searchManager.config().getLog().getSqliteDatabase();
                 if (sqliteDatabase != null) {
