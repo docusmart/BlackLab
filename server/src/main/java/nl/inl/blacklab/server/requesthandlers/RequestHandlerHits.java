@@ -63,10 +63,17 @@ import nl.inl.blacklab.server.search.BlsCacheEntry;
 public class RequestHandlerHits extends RequestHandler {
 
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
+    private static final String ANN_RULE_ID_HEADER_NAME = "X-Ann-Rule-ID";
+    private String ruleId;
 
     public RequestHandlerHits(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
         super(servlet, request, user, indexName, urlResource, urlPathPart);
+        ruleId = request.getHeader(ANN_RULE_ID_HEADER_NAME);
+        if (ruleId == null) {
+            ruleId = "unknown";
+        }
+        logger.info("Will start search for rule id: {}", ruleId);
     }
 
 
@@ -205,7 +212,7 @@ public class RequestHandlerHits extends RequestHandler {
                     "Total time to execute Hits search request", numberOfDocs);
             timerMetric.record(totalTime, TimeUnit.MILLISECONDS);
         }
-        logger.info(String.format("Total execution time is: %d and docs: %d",  totalTime, numDocs));
+        logger.info("For rule:{}. Total execution time is:{} ms and docs:{}", ruleId, totalTime, numDocs);
 
         // TODO timing is now broken because we always retrieve total and use a window on top of it,
         // so we can no longer differentiate the total time from the time to retrieve the requested window
