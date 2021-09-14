@@ -201,12 +201,6 @@ public class RequestHandlerHits extends RequestHandler {
 
         long totalTime = job.threwException() ? -1 : job.timeUserWaited();
         int numDocs = searchParam.getNumberOfDocs();
-        if (totalTime >= 0) {
-            Tags numberOfDocs = Tags.of("numberOfDocs", String.format("%d", numDocs));
-            Timer timerMetric = Metrics.createTimer("TotalTimeHits",
-                    "Total time to execute Hits search request", numberOfDocs);
-            timerMetric.record(totalTime, TimeUnit.MILLISECONDS);
-        }
         logger.info("For rule:{}. Total execution time is:{} ms and docs:{}", ruleId, totalTime, numDocs);
 
         // TODO timing is now broken because we always retrieve total and use a window on top of it,
