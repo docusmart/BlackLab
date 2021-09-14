@@ -12,6 +12,11 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * ConsoleLogDatabase provides an implementation to LogDatabase, that simply
+ * logs internal blacklab operations to stdout.
+ * ConsoleLogDatabase is a lightweight tracing class to enable debugging of search requests.
+ */
 public class ConsoleLogDatabase implements LogDatabase {
     private static final Logger LOGGER = LogManager.getLogger(ConsoleLogDatabase.class);
 
