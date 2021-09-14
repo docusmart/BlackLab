@@ -237,15 +237,14 @@ public class SearchParameters {
         }
     }
 
+    private static final Pattern DOC_NUM_PATT = Pattern.compile("([a-f0-9-]+[)|\\s])+");
     public int getNumberOfDocs() {
         String filter = getString("filter");
         if (StringUtils.isBlank(filter)) {
             return 0;
         }
-        //Experiment with this regex as well "(docId:\\p{Graph}+)+"
-        Pattern patt = Pattern.compile("([a-f0-9-]+[)|\\s])+");
         List<String> allResults = new ArrayList<>();
-        for (MatchResult result : patt.matcher(filter).results()
+        for (MatchResult result : DOC_NUM_PATT.matcher(filter).results()
                 .collect(Collectors.toList())) {
            allResults.add(result.group());
         }

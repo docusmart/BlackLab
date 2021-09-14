@@ -214,7 +214,7 @@ public class Metrics {
         return true;
     }
 
-    public static Timer creatTimer(String name, String description, Iterable<Tag> tags){
+    public static Timer createTimer(String name, String description, Iterable<Tag> tags){
         return Timer.builder(name)
                 .description(description)
                 .tags(tags)

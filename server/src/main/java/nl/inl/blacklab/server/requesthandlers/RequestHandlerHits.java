@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
-import nl.inl.blacklab.requestlogging.LogLevel;
 import nl.inl.blacklab.server.Metrics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,16 +62,12 @@ import nl.inl.blacklab.server.search.BlsCacheEntry;
 public class RequestHandlerHits extends RequestHandler {
 
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
-    private static final String ANN_RULE_ID_HEADER_NAME = "X-Ann-Rule-ID";
-    private String ruleId;
+    private final String ruleId;
 
     public RequestHandlerHits(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
         super(servlet, request, user, indexName, urlResource, urlPathPart);
-        ruleId = request.getHeader(ANN_RULE_ID_HEADER_NAME);
-        if (ruleId == null) {
-            ruleId = "unknown";
-        }
+        ruleId = getRuleId().orElse("unknown");
         logger.info("Will start search for rule id: {}", ruleId);
     }
 
@@ -208,7 +203,7 @@ public class RequestHandlerHits extends RequestHandler {
         int numDocs = searchParam.getNumberOfDocs();
         if (totalTime >= 0) {
             Tags numberOfDocs = Tags.of("numberOfDocs", String.format("%d", numDocs));
-            Timer timerMetric = Metrics.creatTimer("TotalTimeHits",
+            Timer timerMetric = Metrics.createTimer("TotalTimeHits",
                     "Total time to execute Hits search request", numberOfDocs);
             timerMetric.record(totalTime, TimeUnit.MILLISECONDS);
         }
