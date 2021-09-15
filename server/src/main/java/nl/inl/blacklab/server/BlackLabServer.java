@@ -105,7 +105,7 @@ public class BlackLabServer extends HttpServlet {
 
             // Open log database
             try {
-                //Default instrumentation logging, logs at the trace level.
+                // Default instrumentation logging, logs at the trace level.
                 logDatabase = new ConsoleLogDatabase();
                 searchManager.setLogDatabase(logDatabase);
                 String sqliteDatabase = searchManager.config().getLog().getSqliteDatabase();

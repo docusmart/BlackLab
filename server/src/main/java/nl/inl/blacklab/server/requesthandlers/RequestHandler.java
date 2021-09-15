@@ -459,7 +459,7 @@ public abstract class RequestHandler {
     }
 
     protected String getAnnRequestId() {
-        String requestId= request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
+        String requestId = request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
         if (requestId == null) {
             requestId = "unknown";
         }
