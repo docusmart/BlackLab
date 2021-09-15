@@ -466,12 +466,12 @@ public abstract class RequestHandler {
         return  requestId;
     }
     protected Optional<String> getRuleId() {
-        String ruleId= request.getHeader(ANN_RULE_ID_HEADER_NAME);
+        String ruleId = request.getHeader(ANN_RULE_ID_HEADER_NAME);
         return Optional.ofNullable(ruleId);
     }
 
     protected void setRequestIds() {
-        // In search requests request id is acquired from the rule id header
+        // During search requests request id is acquired from the rule id header
         String reqId = getRuleId().orElse(
             Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes()));
         ThreadContext.put("requestId", String.format("%s/%s", getAnnRequestId(), reqId));

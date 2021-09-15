@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
  * ConsoleLogDatabase provides an implementation to LogDatabase, that simply
  * logs internal blacklab operations to stdout.
  * ConsoleLogDatabase is a lightweight tracing class to enable debugging of search requests.
+ * This class logs in the trace level. To see its output set the loglevel to trace.
  */
 public class ConsoleLogDatabase implements LogDatabase {
     private static final Logger LOGGER = LogManager.getLogger(ConsoleLogDatabase.class);
