@@ -3,13 +3,11 @@ package nl.inl.blacklab.server.requesthandlers;
 import javax.servlet.http.HttpServletResponse;
 
 import nl.inl.blacklab.server.exceptions.BlsException;
-import nl.inl.blacklab.server.exceptions.ServiceUnavailable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import nl.inl.blacklab.server.BlackLabServer;
 import nl.inl.blacklab.server.datastream.DataStream;
-import org.apache.lucene.store.AlreadyClosedException;
 
 public class Response {
     static final Logger logger = LogManager.getLogger(Response.class);
