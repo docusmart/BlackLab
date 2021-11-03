@@ -22,21 +22,23 @@ import org.apache.logging.log4j.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import nl.inl.blacklab.exceptions.InsufficientMemoryAvailable;
 import nl.inl.blacklab.exceptions.InterruptedSearch;
+import nl.inl.blacklab.exceptions.InvalidQuery;
 import nl.inl.blacklab.search.BlackLab;
 import nl.inl.blacklab.server.config.BLSConfig;
-import nl.inl.blacklab.server.config.OldBlsConfig;
 import nl.inl.blacklab.server.datastream.DataFormat;
 import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.exceptions.ConfigurationException;
 import nl.inl.blacklab.server.exceptions.InternalServerError;
+<<<<<<< HEAD
 import nl.inl.blacklab.server.logging.ConsoleLogDatabase;
 import nl.inl.blacklab.server.logging.LogDatabase;
 import nl.inl.blacklab.server.logging.LogDatabaseDummy;
 import nl.inl.blacklab.server.logging.LogDatabaseImpl;
 import nl.inl.blacklab.server.requesthandlers.ElementNames;
+=======
+>>>>>>> inl/dev
 import nl.inl.blacklab.server.requesthandlers.RequestHandler;
 import nl.inl.blacklab.server.requesthandlers.Response;
 import nl.inl.blacklab.server.requesthandlers.SearchParameters;
@@ -44,7 +46,7 @@ import nl.inl.blacklab.server.search.SearchManager;
 import nl.inl.blacklab.server.util.ServletUtil;
 
 public class BlackLabServer extends HttpServlet {
-    
+
     /**
      * Root element to use for XML responses.
      */
@@ -59,9 +61,6 @@ public class BlackLabServer extends HttpServlet {
     /** Manages all our searches */
     private SearchManager searchManager;
 
-    /** SQLite database to log all our searches to (if enabled) */
-    private LogDatabase logDatabase = new LogDatabaseDummy();
-
     private boolean configRead = false;
 
     @Override
@@ -74,6 +73,7 @@ public class BlackLabServer extends HttpServlet {
         logger.info("BlackLab Server ready.");
     }
 
+    @SuppressWarnings("deprecation")
     private void readConfig() throws BlsException {
         try {
 
@@ -86,23 +86,12 @@ public class BlackLabServer extends HttpServlet {
             searchDirs.add(servletPath.getAbsoluteFile().getParentFile().getCanonicalFile());
             searchDirs.addAll(BlackLab.defaultConfigDirs());
             ConfigFileReader configFile = new ConfigFileReader(searchDirs, configFileName);
-            try {
-                BLSConfig config;
-                if (configFile.isOldConfig()) {
-                    // Convert old config to new config structure
-                    config = new OldBlsConfig(configFile.getJsonConfig()).getNewConfig();
-                } else {
-                    config = configFile.getConfig();
-                }
-                // load blacklab's internal config before doing anything
-                // It's important we do this as early as possible as some things are loaded depending on the config (such as plugins)
-                BlackLab.setConfig(config.getBLConfig());
-                ElementNames.setUseOldElementNames(config.getProtocol().isUseOldElementNames());
-                searchManager = new SearchManager(config);
-            } catch (IOException e) {
-                throw new ConfigurationException("Error reading config file: " + configFile.getConfigFileRead(), e);
-            }
+            BLSConfig config = configFile.getConfig();
+            // load blacklab's internal config before doing anything
+            // It's important we do this as early as possible as some things are loaded depending on the config (such as plugins)
+            BlackLab.setConfig(config.getBLConfig());
 
+<<<<<<< HEAD
             // Open log database
             try {
                 // Default instrumentation logging, logs at the trace level.
@@ -119,6 +108,14 @@ public class BlackLabServer extends HttpServlet {
             } catch (IOException | ClassNotFoundException e) {
                 throw new RuntimeException("Error opening log database", e);
             }
+=======
+            if (config.getProtocol().isUseOldElementNames())
+                logger.warn("IMPORTANT: Found deprecated setting useOldElementNames. This setting doesn't do anything anymore and will eventually be removed.");
+            searchManager = new SearchManager(config);
+
+            // Set default parameter settings from config
+            SearchParameters.setDefaults(config.getParameters());
+>>>>>>> inl/dev
 
         } catch (JsonProcessingException e) {
             throw new ConfigurationException("Invalid JSON in configuration file", e);
@@ -279,15 +276,15 @@ public class BlackLabServer extends HttpServlet {
         } else {
             try {
                 httpCode = requestHandler.handle(ds);
+            } catch (InvalidQuery e) {
+                httpCode = Response.error(es, "INVALID_QUERY", e.getMessage(), HttpServletResponse.SC_BAD_REQUEST);
             } catch (InternalServerError e) {
                 String msg = ServletUtil.internalErrorMessage(e, debugMode, e.getInternalErrorCode());
                 httpCode = Response.error(es, e.getBlsErrorCode(), msg, e.getHttpStatusCode());
             } catch (BlsException e) {
                 httpCode = Response.error(es, e.getBlsErrorCode(), e.getMessage(), e.getHttpStatusCode());
             } catch (InterruptedSearch e) {
-                httpCode = Response.error(es, "INTERRUPTED", "Search was interrupted", HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-            } catch (InsufficientMemoryAvailable e) {
-                httpCode = Response.error(es, "INSUFFICIENT_MEMORY", e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                httpCode = Response.error(es, "INTERRUPTED", e.getMessage(), HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             } catch (RuntimeException e) {
                 httpCode = Response.internalError(es, e, debugMode, "INTERR_HANDLING_REQUEST");
             } finally {
@@ -325,13 +322,6 @@ public class BlackLabServer extends HttpServlet {
 
     @Override
     public void destroy() {
-
-        try {
-            if (logDatabase != null)
-                logDatabase.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
 
         // Stops the load management thread
         if (searchManager != null)
@@ -376,10 +366,6 @@ public class BlackLabServer extends HttpServlet {
 
     public SearchManager getSearchManager() {
         return searchManager;
-    }
-
-    public LogDatabase logDatabase() {
-        return logDatabase;
     }
 
 }
