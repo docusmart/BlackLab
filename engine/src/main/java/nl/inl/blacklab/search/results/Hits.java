@@ -87,6 +87,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 this.hit.doc = this.hits.docs.get(pos);
                 this.hit.start = this.hits.starts.get(pos);
                 this.hit.end = this.hits.ends.get(pos);
+                this.hit.index = this.pos;
                 ++this.pos;
                 return this.hit;
             }
