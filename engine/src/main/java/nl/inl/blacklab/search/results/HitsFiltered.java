@@ -99,10 +99,10 @@ public class HitsFiltered extends Hits {
                         if (filterProperty.get(indexInSource).equals(filterValue)) {
                             // Yes, keep this hit
                             getHitsArrays().add(hit);
-                            hitsCounted++;
+                            setHitsCounted(getHitsCounted() + 1);
                             if (hit.doc() != previousHitDoc) {
-                                docsCounted++;
-                                docsRetrieved++;
+                                setDocsCounted(getDocsCounted() + 1);
+                                setDocsRetrieved(getDocsRetrieved() + 1);
                                 previousHitDoc = hit.doc();
                             }
                         }

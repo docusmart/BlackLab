@@ -29,17 +29,15 @@ import nl.inl.util.Sort;
 import nl.inl.util.Sort.Sortable;
 
 public abstract class Hits extends Results<Hit, HitProperty> {
-    protected HitsArrays getHitsArrays() {
-        return hitsArrays;
-    }
 
     public static class EphemeralHit implements Hit {
         public int doc = -1;
         public int start = -1;
         public int end = -1;
+        public int index = -1;
 
         public HitImpl toHit() {
-            return new HitImpl(doc, start, end);
+            return new HitImpl(doc, start, end, index);
         }
 
         @Override
@@ -55,6 +53,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         @Override
         public int end() {
             return end;
+        }
+
+        @Override
+        public int index() {
+            return index;
         }
     }
 
@@ -204,7 +207,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
         public HitImpl get(int index) {
             lock.readLock().lock();
-            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index));
+            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index), index);
             lock.readLock().unlock();
             return h;
         }
@@ -367,6 +370,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     private final HitsArrays hitsArrays;
 
+    protected HitsArrays getHitsArrays() {
+        return hitsArrays;
+    }
+
+
     protected static final Logger logger = LogManager.getLogger(Hits.class);
 
     /**
@@ -478,18 +486,18 @@ public abstract class Hits extends Results<Hit, HitProperty> {
      * The number of hits we've seen and counted so far. May be more than the number
      * of hits we've retrieved if that exceeds maxHitsToRetrieve.
      */
-    protected int hitsCounted = 0;
+    private int hitsCounted = 0;
 
     /**
      * The number of separate documents we've seen in the hits retrieved.
      */
-    protected int docsRetrieved = 0;
+    private int docsRetrieved = 0;
 
     /**
      * The number of separate documents we've counted so far (includes non-retrieved
      * hits).
      */
-    protected int docsCounted = 0;
+    private int docsCounted = 0;
 
     private ResultsStats docsStats = new ResultsStats() {
 
@@ -948,9 +956,9 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         boolean hasMoreHits = isLastHit ? resultsProcessedAtLeast(size + 1) : true;
 
         CapturedGroups capturedGroups = null;
-        if (this.capturedGroups != null) {
-            capturedGroups = new CapturedGroupsImpl(this.capturedGroups.names());
-            capturedGroups.put(hit, this.capturedGroups.get(hit));
+        if (this.capturedGroups() != null) {
+            capturedGroups = new CapturedGroupsImpl(this.capturedGroups().names());
+            capturedGroups.put(hit, this.capturedGroups().get(hit));
         }
 
         HitsArrays r = new HitsArrays();
@@ -975,7 +983,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     public boolean hasCapturedGroups() {
-        return capturedGroups != null;
+        return capturedGroups() != null;
     }
 
     // Hits display
@@ -997,5 +1005,29 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     public HitsArrays hitsArrays() {
         return getHitsArrays();
+    }
+
+    protected int getHitsCounted() {
+        return hitsCounted;
+    }
+
+    protected void setHitsCounted(int hitsCounted) {
+        this.hitsCounted = hitsCounted;
+    }
+
+    protected int getDocsRetrieved() {
+        return docsRetrieved;
+    }
+
+    protected void setDocsRetrieved(int docsRetrieved) {
+        this.docsRetrieved = docsRetrieved;
+    }
+
+    protected int getDocsCounted() {
+        return docsCounted;
+    }
+
+    protected void setDocsCounted(int docsCounted) {
+        this.docsCounted = docsCounted;
     }
 }

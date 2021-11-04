@@ -411,7 +411,7 @@ public class HitsFromQueryParallel extends Hits {
                     weight,
                     leafReaderContext,
                     this.hitQueryContext,
-                        this.getHitsArrays(),
+                    this.getHitsArrays(),
                     this.capturedGroups,
                     this.globalDocsProcessed,
                     this.globalDocsCounted,

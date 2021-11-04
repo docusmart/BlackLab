@@ -331,7 +331,7 @@ public class HitsFromQuery extends Hits {
                         previousHitDoc = hitDoc;
                     }
                     if (!maxHitsProcessed) {
-                        Hit hit = Hit.create(currentSourceSpans.docID() + currentDocBase, currentSourceSpans.startPosition(), currentSourceSpans.endPosition());
+                        Hit hit = Hit.create(currentSourceSpans.docID() + currentDocBase, currentSourceSpans.startPosition(), currentSourceSpans.endPosition(), hitsResultsContext.hitsArrays.size());
                         if (capturedGroups != null) {
                             Span[] groups = new Span[hitQueryContext.numberOfCapturedGroups()];
                             hitQueryContext.getCapturedGroups(groups);
@@ -379,13 +379,6 @@ public class HitsFromQuery extends Hits {
         return this.hitsResultsContext.maxStats;
     }
 
-/*
-    @Override
-    protected List<Hit> getResults() {
-        return this.hitsResultsContext.results;
-    }
-*/
-
     @Override
     public CapturedGroupsImpl capturedGroups() {
         return this.hitsResultsContext.capturedGroups;
@@ -395,21 +388,4 @@ public class HitsFromQuery extends Hits {
     protected HitsArrays getHitsArrays() {
         return this.hitsResultsContext.hitsArrays;
     }
-
-    /*    @Override
-    protected int getHitsCounted() {
-        return this.hitsResultsContext.hitsCounted;
-    }
-
-    @Override
-    protected int getDocsRetrieved() {
-        return this.hitsResultsContext.docsRetrieved;
-    }
-
-    @Override
-    protected int getDocsCounted() {
-        return this.hitsResultsContext.docsCounted;
-    }
-     */
-
 }

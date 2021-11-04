@@ -9,9 +9,9 @@ public class HitGroupWithoutResults extends HitGroup {
 
         public HitsWithoutResults(QueryInfo queryInfo, int totalHits, int totalDocuments, boolean maxHitsProcessed, boolean maxHitsCounted) {
             super(queryInfo, true);
-            this.hitsCounted = totalHits;
-            this.docsCounted = totalDocuments;
-            this.docsRetrieved = 0;
+            this.setHitsCounted(totalHits);
+            this.setDocsCounted(totalDocuments);
+            this.setDocsRetrieved(0);
 
             this.maxHitsProcessed = maxHitsProcessed;
             this.maxHitsCounted = maxHitsCounted;
