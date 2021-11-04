@@ -29,6 +29,10 @@ import nl.inl.util.Sort;
 import nl.inl.util.Sort.Sortable;
 
 public abstract class Hits extends Results<Hit, HitProperty> {
+    protected HitsArrays getHitsArrays() {
+        return hitsArrays;
+    }
+
     public static class EphemeralHit implements Hit {
         public int doc = -1;
         public int start = -1;
@@ -107,6 +111,12 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             this.docs = new IntArrayList();
             this.starts = new IntArrayList();
             this.ends = new IntArrayList();
+        }
+
+        public HitsArrays(HitsArrays toCopy) {
+            this.docs = new IntArrayList(toCopy.docs.toArray());
+            this.starts = new IntArrayList(toCopy.starts.toArray());
+            this.ends = new IntArrayList(toCopy.ends.toArray());
         }
 
         public HitsArrays(IntArrayList docs, IntArrayList starts, IntArrayList ends) {
@@ -355,7 +365,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     };
 
 
-    protected final HitsArrays hitsArrays;
+    private final HitsArrays hitsArrays;
 
     protected static final Logger logger = LogManager.getLogger(Hits.class);
 
@@ -486,7 +496,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         @Override
         public boolean processedAtLeast(int lowerBound) {
             while (!doneProcessingAndCounting() && docsProcessedSoFar() < lowerBound) {
-                ensureResultsRead(hitsArrays.size() + FETCH_HITS_MIN);
+                ensureResultsRead(getHitsArrays().size() + FETCH_HITS_MIN);
             }
             return docsProcessedSoFar() >= lowerBound;
         }
@@ -600,7 +610,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         MutableInt docsRetrieved = new MutableInt(0); // Bypass warning (enclosing scope must be effectively final)
         HitsArrays window = new HitsArrays();
 
-        this.hitsArrays.withReadLock(h -> {
+        this.getHitsArrays().withReadLock(h -> {
             int prevDoc = -1;
             EphemeralHit hit = new EphemeralHit();
             for (int i = first; i < first + number; i++) {
@@ -658,11 +668,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         CapturedGroups capturedGroups = hasCapturedGroups() ? new CapturedGroupsImpl(capturedGroups().names()) : null;
         HitsArrays sample = new HitsArrays();
 
-        this.hitsArrays.withReadLock(__ -> {
+        this.getHitsArrays().withReadLock(__ -> {
             int previousDoc = -1;
             EphemeralHit hit = new EphemeralHit();
             for (Integer hitIndex : chosenHitIndices) {
-                this.hitsArrays.getEphemeral(hitIndex, hit);
+                this.getHitsArrays().getEphemeral(hitIndex, hit);
                 if (hit.doc != previousDoc) {
                     docsInSample.add(1);
                     previousDoc = hit.doc;
@@ -699,7 +709,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
         // Perform the actual sort.
         this.ensureAllResultsRead();
-        HitsArrays sorted = this.hitsArrays.sort(sortProp); // TODO use wrapper objects
+        HitsArrays sorted = this.getHitsArrays().sort(sortProp); // TODO use wrapper objects
 
         CapturedGroups capturedGroups = capturedGroups();
         int hitsCounted = hitsCountedSoFar();
@@ -738,13 +748,13 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     protected boolean resultsProcessedAtLeast(int lowerBound) {
-        return this.hitsArrays.size() >= lowerBound;
+        return this.getHitsArrays().size() >= lowerBound;
     }
 
     @Override
     protected int resultsProcessedTotal() {
         ensureResultsRead(-1);
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     @Override
@@ -754,7 +764,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     public int numberOfResultObjects() {
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     @Override
@@ -777,12 +787,12 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     public Iterator<EphemeralHit> ephemeralIterator() {
         ensureAllResultsRead();
-        return hitsArrays.iterator();
+        return getHitsArrays().iterator();
     }
 
     @Override
     public Hit get(int i) {
-        return this.hitsArrays.get(i);
+        return this.getHitsArrays().get(i);
     }
 
     /**
@@ -869,7 +879,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         ensureAllResultsRead();
         HitsArrays r = new HitsArrays();
         // all hits read, no lock needed.
-        for (EphemeralHit h : this.hitsArrays) {
+        for (EphemeralHit h : this.getHitsArrays()) {
             if (h.doc == docid)
                 r.add(h);
         }
@@ -884,16 +894,16 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     protected boolean hitsProcessedAtLeast(int lowerBound) {
-        return this.hitsArrays.size() >= lowerBound;
+        return this.getHitsArrays().size() >= lowerBound;
     }
 
     protected int hitsProcessedTotal() {
         ensureAllResultsRead();
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     protected int hitsProcessedSoFar() {
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     protected int hitsCountedTotal() {
@@ -934,7 +944,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     public Hits window(Hit hit) {
         int size = this.size();
 
-        boolean isLastHit = this.hitsArrays.get(this.hitsArrays.size() - 1).equals(hit);
+        boolean isLastHit = this.getHitsArrays().get(this.getHitsArrays().size() - 1).equals(hit);
         boolean hasMoreHits = isLastHit ? resultsProcessedAtLeast(size + 1) : true;
 
         CapturedGroups capturedGroups = null;
@@ -986,6 +996,6 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     public HitsArrays hitsArrays() {
-        return hitsArrays;
+        return getHitsArrays();
     }
 }

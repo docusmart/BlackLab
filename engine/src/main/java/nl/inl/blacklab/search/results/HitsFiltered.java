@@ -12,9 +12,7 @@ import nl.inl.blacklab.search.indexmetadata.Annotation;
 
 /**
  * A Hits object that filters another.
- *
  */
-//TODO this class needs to work on HitsArray and not in getResults
 public class HitsFiltered extends Hits {
 
     private Lock ensureHitsReadLock = new ReentrantLock();
@@ -70,14 +68,14 @@ public class HitsFiltered extends Hits {
     protected void ensureResultsRead(int number) {
         try {
             // Prevent locking when not required
-            if (doneFiltering || number >= 0 && getResults().size() > number)
+            if (doneFiltering || number >= 0 && getHitsArrays().size() > number)
                 return;
 
             // At least one hit needs to be fetched.
             // Make sure we fetch at least FETCH_HITS_MIN while we're at it, to avoid too much locking.
-            if (number >= 0 && number - getResults().size() < FETCH_HITS_MIN)
-                number = getResults().size() + FETCH_HITS_MIN;
-    
+            if (number >= 0 && number - getHitsArrays().size() < FETCH_HITS_MIN)
+                number = getHitsArrays().size() + FETCH_HITS_MIN;
+
             while (!ensureHitsReadLock.tryLock()) {
                 /*
                  * Another thread is already counting, we don't want to straight up block until it's done
@@ -85,26 +83,26 @@ public class HitsFiltered extends Hits {
                  * So instead poll our own state, then if we're still missing results after that just count them ourselves
                  */
                 Thread.sleep(50);
-                if (doneFiltering || number >= 0 && getResults().size() >= number)
+                if (doneFiltering || number >= 0 && getHitsArrays().size() >= number)
                     return;
             }
             try {
                 boolean readAllHits = number < 0;
-                while (!doneFiltering && (readAllHits || getResults().size() < number)) {
-                    // Abort if asked
+                while (!doneFiltering && (readAllHits || getHitsArrays().size() < number)) {
+                 // Abort if asked
                     threadAborter.checkAbort();
-    
+
                     // Advance to next hit
                     indexInSource++;
                     if (source.hitsProcessedAtLeast(indexInSource + 1)) {
                         Hit hit = source.get(indexInSource);
                         if (filterProperty.get(indexInSource).equals(filterValue)) {
                             // Yes, keep this hit
-                            getResults().add(hit);
-                            setHitsCounted(getHitsCounted() + 1);
+                            getHitsArrays().add(hit);
+                            hitsCounted++;
                             if (hit.doc() != previousHitDoc) {
-                                setDocsCounted(getDocsCounted() + 1);
-                                setDocsRetrieved(getDocsRetrieved() + 1);
+                                docsCounted++;
+                                docsRetrieved++;
                                 previousHitDoc = hit.doc();
                             }
                         }

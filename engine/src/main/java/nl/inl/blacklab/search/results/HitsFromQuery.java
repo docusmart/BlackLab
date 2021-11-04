@@ -34,7 +34,6 @@ import nl.inl.blacklab.search.lucene.optimize.ClauseCombinerNfa;
 /**
  * A Hits object that is filled from a BLSpanQuery.
  */
-//TODO this files needs to read/write HitsArray not getResutls()
 public class HitsFromQuery extends Hits {
 
     /** Settings such as max. hits to process/count. */
@@ -93,7 +92,7 @@ public class HitsFromQuery extends Hits {
      */
     private static class HitsResultsContext {
         boolean sourceSpansFullyRead;
-        List<Hit> results;
+        HitsArrays hitsArrays;
         CapturedGroupsImpl capturedGroups;
         int hitsCounted;
         int docsRetrieved;
@@ -101,13 +100,13 @@ public class HitsFromQuery extends Hits {
         MaxStats maxStats;
 
         HitsResultsContext() {
-            this.results = new ArrayList<>();
+            this.hitsArrays = new HitsArrays();
             this.maxStats = new MaxStats();
         }
 
         HitsResultsContext(HitsResultsContext context) {
             this.sourceSpansFullyRead = context.sourceSpansFullyRead;
-            this.results = new ArrayList<>(context.results);
+            this.hitsArrays = new HitsArrays(context.hitsArrays);
             this.capturedGroups = context.capturedGroups != null ? new CapturedGroupsImpl(context.capturedGroups) : null;
             this.hitsCounted = context.hitsCounted;
             this.docsRetrieved = context.docsRetrieved;
@@ -188,7 +187,7 @@ public class HitsFromQuery extends Hits {
     @Override
     public String toString() {
         HitsResultsContext hitsResultsContext = this.hitsResultsContext;
-        return "Hits#" + hitsObjId + " (fullyRead=" + hitsResultsContext.sourceSpansFullyRead + ", hitsSoFar=" + hitsResultsContext.results.size() + ")";
+        return "Hits#" + hitsObjId + " (fullyRead=" + hitsResultsContext.sourceSpansFullyRead + ", hitsSoFar=" + hitsResultsContext.hitsArrays.size() + ")";
     }
 
     /**
@@ -198,19 +197,21 @@ public class HitsFromQuery extends Hits {
      *            method returns (unless there are fewer hits than this); if
      *            negative, reads all hits
      */
+    //TODO Lexion change, this method and the whole class needs check as
+    // we are not using the hitsArray change.
     @Override
     protected void ensureResultsRead(int number) {
         try {
             HitsResultsContext hitsResultsContext = this.hitsResultsContext; // Volatile read memory-barrier
 
             // Prevent locking when not required
-            if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.results.size() > number))
+            if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.hitsArrays.size() > number))
                 return;
 
             // At least one hit needs to be fetched.
             // Make sure we fetch at least FETCH_HITS_MIN while we're at it, to avoid too much locking.
-            if (number >= 0 && number - hitsResultsContext.results.size() < FETCH_HITS_MIN)
-                number = hitsResultsContext.results.size() + FETCH_HITS_MIN;
+            if (number >= 0 && number - hitsResultsContext.hitsArrays.size() < FETCH_HITS_MIN)
+                number = hitsResultsContext.hitsArrays.size() + FETCH_HITS_MIN;
 
             while (!ensureHitsReadLock.tryLock()) {
                 /*
@@ -221,13 +222,13 @@ public class HitsFromQuery extends Hits {
                 Thread.sleep(50);
 
                 hitsResultsContext = this.hitsResultsContext; // Volatile read memory-barrier
-                if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.results.size() > number))
+                if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.hitsArrays.size() > number))
                     return;
             }
             try {
                 // One more check in case another thread finished the read.
                 hitsResultsContext = this.hitsResultsContext; // Volatile read memory-barrier
-                if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.results.size() > number))
+                if (hitsResultsContext.sourceSpansFullyRead || (number >= 0 && hitsResultsContext.hitsArrays.size() > number))
                     return;
 
                 // Make a copy of the context so we can mutate it.
@@ -236,11 +237,11 @@ public class HitsFromQuery extends Hits {
                 boolean readAllHits = number < 0;
                 int maxHitsToCount = searchSettings.maxHitsToCount();
                 int maxHitsToProcess = searchSettings.maxHitsToProcess();
-                while (readAllHits || hitsResultsContext.results.size() < number) {
+                while (readAllHits || hitsResultsContext.hitsArrays.size() < number) {
     
                     // Abort if asked
                     threadAborter.checkAbort();
-    
+
                     // Stop if we're at the maximum number of hits we want to count
                     if (maxHitsToCount >= 0 && hitsResultsContext.hitsCounted >= maxHitsToCount) {
                         hitsResultsContext.maxStats.setHitsCountedExceededMaximum();
@@ -330,14 +331,14 @@ public class HitsFromQuery extends Hits {
                         previousHitDoc = hitDoc;
                     }
                     if (!maxHitsProcessed) {
-                        Hit hit = Hit.create(currentSourceSpans.docID() + currentDocBase, currentSourceSpans.startPosition(), currentSourceSpans.endPosition(), hitsResultsContext.results.size());
-                        if (hitsResultsContext.capturedGroups != null) {
+                        Hit hit = Hit.create(currentSourceSpans.docID() + currentDocBase, currentSourceSpans.startPosition(), currentSourceSpans.endPosition());
+                        if (capturedGroups != null) {
                             Span[] groups = new Span[hitQueryContext.numberOfCapturedGroups()];
                             hitQueryContext.getCapturedGroups(groups);
                             hitsResultsContext.capturedGroups.put(hit, groups);
                         }
-                        hitsResultsContext.results.add(hit);
-                        if (maxHitsToProcess >= 0 && hitsResultsContext.results.size() >= maxHitsToProcess) {
+                        hitsResultsContext.hitsArrays.add(hit);
+                        if (maxHitsToProcess >= 0 && hitsResultsContext.hitsArrays.size() >= maxHitsToProcess) {
                             hitsResultsContext.maxStats.setHitsProcessedExceededMaximum();
                         }
                     }
@@ -378,10 +379,12 @@ public class HitsFromQuery extends Hits {
         return this.hitsResultsContext.maxStats;
     }
 
+/*
     @Override
     protected List<Hit> getResults() {
         return this.hitsResultsContext.results;
     }
+*/
 
     @Override
     public CapturedGroupsImpl capturedGroups() {
@@ -389,6 +392,11 @@ public class HitsFromQuery extends Hits {
     }
 
     @Override
+    protected HitsArrays getHitsArrays() {
+        return this.hitsResultsContext.hitsArrays;
+    }
+
+    /*    @Override
     protected int getHitsCounted() {
         return this.hitsResultsContext.hitsCounted;
     }
@@ -402,5 +410,6 @@ public class HitsFromQuery extends Hits {
     protected int getDocsCounted() {
         return this.hitsResultsContext.docsCounted;
     }
+     */
 
 }

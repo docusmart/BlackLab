@@ -25,9 +25,9 @@ public class HitsList extends Hits {
         super(queryInfo, hits);
         this.capturedGroups = capturedGroups;
 
-        hitsCounted = this.hitsArrays.size();
+        hitsCounted = this.getHitsArrays().size();
         int prevDoc = -1;
-        MutableIntIterator it = this.hitsArrays.docs().intIterator();
+        MutableIntIterator it = this.getHitsArrays().docs().intIterator();
         while (it.hasNext()) {
             int docId = it.next();
             if (docId != prevDoc) {
