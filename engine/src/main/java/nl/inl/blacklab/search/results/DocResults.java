@@ -248,7 +248,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     @Override
     public DocResults sort(DocProperty sortProp) {
         ensureAllResultsRead();
-        List<DocResult> sorted = new ArrayList<DocResult>(this.results);
+        List<DocResult> sorted = new ArrayList<DocResult>(this.getResults());
         sorted.sort(sortProp);
         return DocResults.fromList(queryInfo(), sorted, (SampleParameters)null, (WindowStats)null);
     }
@@ -314,7 +314,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                 HitsArrays docHits = partialDocHits;
                 int lastDocId = partialDocId;
 
-                while (sourceHitsIterator.hasNext() && (index < 0 || index > getResults.size())) {
+                while (sourceHitsIterator.hasNext() && (index < 0 || index > getResults().size())) {
                     EphemeralHit h = sourceHitsIterator.next();
                     int curDoc = h.doc;
                     if (curDoc != lastDocId) {

@@ -91,7 +91,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
     @Override
     public DocGroups sort(GroupProperty<DocResult, DocGroup> sortProp) {
         ensureAllResultsRead();
-        List<DocGroup> sorted = new ArrayList<DocGroup>(this.results);
+        List<DocGroup> sorted = new ArrayList<DocGroup>(this.getResults());
         sorted.sort(sortProp);
         return new DocGroups(
             this.queryInfo(), 
@@ -111,7 +111,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
     public DocGroups filter(GroupProperty<DocResult, DocGroup> property, PropertyValue value) {
         return new DocGroups(
             this.queryInfo(), 
-            this.results.stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList()), 
+            this.getResults().stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList()),
             this.groupBy, 
             (SampleParameters)null, 
             (WindowStats)null
