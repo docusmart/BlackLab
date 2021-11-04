@@ -385,6 +385,21 @@ public class HitsFromQuery extends Hits {
     }
 
     @Override
+    protected int getHitsCounted() {
+        return this.hitsResultsContext.hitsCounted;
+    }
+
+    @Override
+    protected int getDocsRetrieved() {
+        return this.hitsResultsContext.docsRetrieved;
+    }
+
+    @Override
+    protected int getDocsCounted() {
+        return this.hitsResultsContext.docsCounted;
+    }
+
+    @Override
     protected HitsArrays getHitsArrays() {
         return this.hitsResultsContext.hitsArrays;
     }
