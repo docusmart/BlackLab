@@ -111,7 +111,6 @@ public class RequestHandlerHitsGrouped extends RequestHandler {
 
         Map<Integer, String> pids = new HashMap<>();
 
-        int i = 0;
         ds.startEntry("hitGroups").startList();
         int last = Math.min(first + requestedWindowSize, groups.size());
 
