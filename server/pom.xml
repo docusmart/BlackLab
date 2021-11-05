@@ -59,6 +59,7 @@
             <artifactId>commons-dbcp</artifactId>
             <version>1.4</version>
         </dependency>
+
         <!-- for metrics -->
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -85,10 +86,5 @@
             <artifactId>tomcat-catalina</artifactId>
             <version>9.0.50</version>
         </dependency>
-
-
-
     </dependencies>
-
-
 </project>
