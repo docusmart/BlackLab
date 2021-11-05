@@ -690,12 +690,12 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 sample.add(hit);
                 if (capturedGroups != null) {
                     Hit h = hit.toHit();
-                    capturedGroups.put(h, this.capturedGroups.get(h));
+                    capturedGroups.put(h, capturedGroups().get(h));
                 }
             }
         });
 
-        return Hits.fromList(queryInfo(), sample, null, sampleParameters, sample.size(), docsInSample.getValue(), docsInSample.getValue(), capturedGroups);
+        return Hits.fromList(queryInfo(), sample, null, sampleParameters, sample.size(), docsInSample.getValue(), docsInSample.getValue(), capturedGroups());
     }
 
     /**
@@ -917,7 +917,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     protected int hitsCountedTotal() {
         ensureAllResultsRead();
-        return hitsCounted;
+        return getHitsCounted();
     }
 
     public ResultsStats docsStats() {
@@ -926,24 +926,24 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     protected int docsProcessedTotal() {
         ensureAllResultsRead();
-        return docsRetrieved;
+        return getDocsRetrieved();
     }
 
     protected int docsCountedTotal() {
         ensureAllResultsRead();
-        return docsCounted;
+        return getDocsCounted();
     }
 
     protected int hitsCountedSoFar() {
-        return hitsCounted;
+        return getHitsCounted();
     }
 
     protected int docsCountedSoFar() {
-        return docsCounted;
+        return getDocsCounted();
     }
 
     protected int docsProcessedSoFar() {
-        return docsRetrieved;
+        return getDocsRetrieved();
     }
 
     // Deriving other Hits / Results instances
