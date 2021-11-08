@@ -217,7 +217,7 @@ public class IndexManager {
             throw new NotAuthorized("Could not create index. Can only create your own private indices.");
         String indexName = Index.getIndexName(indexId);
 
-        // Lexion Change: We don't want to limit the maximum number of indices.
+        //TODO(eginez) Lexion Change: We don't want to limit the maximum number of indices. Can this be a setting?
 //        if (!canCreateIndex(userId))
 //            throw new BadRequest("CANNOT_CREATE_INDEX ",
 //                    "Could not create index. You already have the maximum of "

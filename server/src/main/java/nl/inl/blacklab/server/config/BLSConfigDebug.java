@@ -8,6 +8,7 @@ public class BLSConfigDebug {
     List<String> addresses = Collections.emptyList();
 
     /** Run all local requests in debug mode */
+    // TODO(eginez) find a way to set this in the config if possible
     boolean alwaysAllowDebugInfo = true;
 
     public List<String> getAddresses() {

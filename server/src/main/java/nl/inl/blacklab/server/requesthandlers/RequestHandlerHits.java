@@ -81,6 +81,7 @@ import nl.inl.blacklab.server.util.BlsUtils;
  */
 public class RequestHandlerHits extends RequestHandler {
 
+    //TODO(eginez) Can we upstream these changes?
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
     private static final String ANN_DOC_COUNT_HEADER = "X-Ann-Doc-Count";
     private final String ruleId;
@@ -257,6 +258,7 @@ public class RequestHandlerHits extends RequestHandler {
 
             if (contextSettings.concType() == ConcordanceType.CONTENT_STORE) {
                 // Add concordance from original XML
+                //TODO(eginez) change in output shape?
                 Concordance c = concordances.get(hit);
                 ds.startEntry("match").plain(c.match()).endEntry();
             } else {

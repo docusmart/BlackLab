@@ -29,7 +29,7 @@ public abstract class AbstractSearch<R extends SearchResult> implements Search<R
 
     @Override
     public SearchCacheEntry<R> executeAsync(boolean allowQueue) {
-        //TODO Fix this
+        //TODO(eginez) Fix this
         final String requestId = ThreadContext.get("requestId");
         ThreadContext.put("requestId", requestId);
         SearchCacheEntry<R> future = queryInfo.index().cache().getAsync(this, allowQueue);

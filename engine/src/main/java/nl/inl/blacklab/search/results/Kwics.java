@@ -122,8 +122,8 @@ public class Kwics {
             }
         }
         // last part
-        Hits window = hits.window(firstIndexWithCurrentDocId, hits.size() - firstIndexWithCurrentDocId);
-        Contexts.makeKwicsSingleDocForwardIndex(window,
+        Contexts.makeKwicsSingleDocForwardIndex(
+            hits.window(firstIndexWithCurrentDocId, hits.size() - firstIndexWithCurrentDocId),
             wordForwardIndex, punctForwardIndex, attrForwardIndices, fiidLookups, contextSize, conc1);
         
         return conc1;

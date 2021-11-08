@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import nl.inl.blacklab.server.util.JsonUtil;
 
+// TODO(eginez) Find a way to disable multithreaded search by default
 public class OldBlsConfigCacheAndPerformance {
 
     private static final Logger logger = LogManager.getLogger(OldBlsConfigCacheAndPerformance.class);

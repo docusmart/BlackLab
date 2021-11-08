@@ -454,7 +454,7 @@ public class BlsCache implements SearchCache {
 
         //------------------
         // STEP 2: abort any long-running counts that no client has asked about for a while.
-        // LEXION CHANGE: we've commented out step 2, as it causes deadlocks under heavy load.
+        // TODO(eginez) LEXION CHANGE: we've commented out step 2, as it causes deadlocks under heavy load.
  //       for (int i = 0; i < searches.size(); i++) {
  //           BlsCacheEntry<?> search = searches.get(i);
  //           if (search.isRunning()) {
