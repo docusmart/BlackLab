@@ -8,6 +8,7 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.logging.log4j.LogManager;
@@ -87,7 +88,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 this.hit.doc = this.hits.docs.get(pos);
                 this.hit.start = this.hits.starts.get(pos);
                 this.hit.end = this.hits.ends.get(pos);
-                this.hit.index = this.pos;
+                this.hit.index = this.hits.indicesFromResultSet.get(pos);
                 ++this.pos;
                 return this.hit;
             }
@@ -110,20 +111,23 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         private final IntArrayList docs;
         private final IntArrayList starts;
         private final IntArrayList ends;
+        private final IntArrayList indicesFromResultSet;
 
         public HitsArrays() {
             this.docs = new IntArrayList();
             this.starts = new IntArrayList();
             this.ends = new IntArrayList();
+            this.indicesFromResultSet = new IntArrayList();
         }
 
         public HitsArrays(HitsArrays toCopy) {
             this.docs = new IntArrayList(toCopy.docs.toArray());
             this.starts = new IntArrayList(toCopy.starts.toArray());
             this.ends = new IntArrayList(toCopy.ends.toArray());
+            this.indicesFromResultSet = new IntArrayList(toCopy.indicesFromResultSet.toArray());
         }
 
-        public HitsArrays(IntArrayList docs, IntArrayList starts, IntArrayList ends) {
+        public HitsArrays(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indicesFromResultSet) {
             if (docs == null || starts == null || ends == null)
                 throw new NullPointerException();
             if (docs.size() != starts.size() || docs.size() != ends.size())
@@ -132,21 +136,24 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             this.docs = docs;
             this.starts = starts;
             this.ends = ends;
+            this.indicesFromResultSet = indicesFromResultSet;
         }
 
-        public void add(int doc, int start, int end) {
+        public void add(int doc, int start, int end, int index) {
             this.lock.writeLock().lock();
             docs.add(doc);
             starts.add(start);
             ends.add(end);
+            indicesFromResultSet.add(index);
             this.lock.writeLock().unlock();
         }
 
-        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends) {
+        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indices) {
             this.lock.writeLock().lock();
             this.docs.addAll(docs);
             this.starts.addAll(starts);
             this.ends.addAll(ends);
+            this.indicesFromResultSet.addAll(indices);
             this.lock.writeLock().unlock();
         }
 
@@ -156,6 +163,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.add(hit.doc);
             starts.add(hit.start);
             ends.add(hit.end);
+            indicesFromResultSet.add(hit.index);
             this.lock.writeLock().unlock();
         }
 
@@ -165,6 +173,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.add(hit.doc());
             starts.add(hit.start());
             ends.add(hit.end());
+            indicesFromResultSet.add(hit.index());
             this.lock.writeLock().unlock();
         }
 
@@ -174,6 +183,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 docs.add(hit.doc());
                 starts.add(hit.start());
                 ends.add(hit.end());
+                indicesFromResultSet.add(hit.index());
             }
             this.lock.writeLock().unlock();
         }
@@ -184,6 +194,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.addAll(hits.docs());
             starts.addAll(hits.starts());
             ends.addAll(hits.ends());
+            indicesFromResultSet.addAll(hits.indices());
             hits.lock.readLock().unlock();
             this.lock.writeLock().unlock();
         }
@@ -208,7 +219,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
         public HitImpl get(int index) {
             lock.readLock().lock();
-            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index), index);
+            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index), indicesFromResultSet.get(index));
             lock.readLock().unlock();
             return h;
         }
@@ -232,6 +243,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             h.doc = docs.get(index);
             h.start = starts.get(index);
             h.end = ends.get(index);
+            h.index = indicesFromResultSet.get(index);
             lock.readLock().unlock();
         }
 
@@ -296,6 +308,16 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             return ends;
         }
 
+
+        /**
+         * Expert use: get the internal indices on the original result set
+         * The array is not locked, so care should be taken when reading it.
+         * Best to wrap usage of this function and the returned in a withReadLock call.
+         *
+         * @return
+         */
+        public IntArrayList indices() { return indicesFromResultSet;}
+
         /** Note: iterating does not lock the arrays, to do that, it should be performed in a {@link #withReadLock} callback. */
         @Override
         public HitIterator iterator() {
@@ -359,11 +381,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         @Override
         public void add(Hit hit) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
-        public void add(int doc, int start, int end){throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
+        public void add(int doc, int start, int end, int index){throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
         public void addAll(HitsArrays hits) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
-        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
+        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indices) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
         public void addAll(java.util.List<Hit> hits) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
     };
@@ -408,8 +430,9 @@ public abstract class Hits extends Results<Hit, HitProperty> {
      * @param end hit ends
      * @return hits found
      */
-    public static Hits fromArrays(QueryInfo queryInfo, int[] docs, int[] starts, int[] ends) {
-        return new HitsList(queryInfo, new HitsArrays(new IntArrayList(docs), new IntArrayList(starts), new IntArrayList(ends)), null);
+    public static Hits fromArrays(QueryInfo queryInfo, int[] docs, int[] starts, int[] ends ) {
+        final int[] indices = IntStream.range(0, ends.length).toArray();
+        return new HitsList(queryInfo, new HitsArrays(new IntArrayList(docs), new IntArrayList(starts), new IntArrayList(ends), new IntArrayList(indices)), null);
     }
 
     public static Hits fromList(QueryInfo queryInfo, HitsArrays hits, CapturedGroups capturedGroups) {

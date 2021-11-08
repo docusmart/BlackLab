@@ -273,7 +273,7 @@ public class HitsFromQueryParallel extends Hits {
                     if (storeThisHit) {
                         int start = spans.startPosition();
                         int end = spans.endPosition();
-                        results.add(doc, start, end);
+                        results.add(doc, start, end, results.size());
                         if (capturedGroups != null) {
                             Span[] groups = new Span[numCaptureGroups];
                             hitQueryContext.getCapturedGroups(groups);
@@ -325,6 +325,7 @@ public class HitsFromQueryParallel extends Hits {
                 hits.docs().clear();
                 hits.starts().clear();
                 hits.ends().clear();
+                hits.indices().clear();
             });
         }
 
