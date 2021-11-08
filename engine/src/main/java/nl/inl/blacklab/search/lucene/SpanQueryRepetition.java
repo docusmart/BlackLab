@@ -70,13 +70,13 @@ public class SpanQueryRepetition extends BLSpanQueryAbstract {
                 BLSpanQuery r = new SpanQueryAnyToken(queryInfo, n, n, base.getRealField());
                 return r;
             }
-   //     } else if (baseRewritten.isSingleTokenNot() && min > 0) {
-   //         // Rewrite to anytokens-not-containing form so we can optimize it
-   //         // (note the check for min > 0 above, because position filter cannot match the empty sequence)
-   //         BLSpanQuery container = new SpanQueryRepetition(new SpanQueryAnyToken(queryInfo, 1, 1, base.getRealField()), min, max);
-   //         container = container.rewrite(reader);
-   //         return new SpanQueryPositionFilter(container, baseRewritten.inverted(),
-   //                 SpanQueryPositionFilter.Operation.CONTAINING, true);
+        } else if (baseRewritten.isSingleTokenNot() && min > 0) {
+            // Rewrite to anytokens-not-containing form so we can optimize it
+            // (note the check for min > 0 above, because position filter cannot match the empty sequence)
+            BLSpanQuery container = new SpanQueryRepetition(new SpanQueryAnyToken(queryInfo, 1, 1, base.getRealField()), min, max);
+            container = container.rewrite(reader);
+            return new SpanQueryPositionFilter(container, baseRewritten.inverted(),
+                    SpanQueryPositionFilter.Operation.CONTAINING, true);
         } else if (baseRewritten instanceof SpanQueryRepetition) {
             SpanQueryRepetition tp = (SpanQueryRepetition) baseRewritten;
             if (max == MAX_UNLIMITED && tp.max == MAX_UNLIMITED) {
