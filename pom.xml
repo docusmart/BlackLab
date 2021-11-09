@@ -28,6 +28,7 @@
 
         <module>contrib/convert-and-tag</module>
         <module>contrib/legacy-docindexers</module>
+        <module>instrumentation</module>
     </modules>
 
     <properties>

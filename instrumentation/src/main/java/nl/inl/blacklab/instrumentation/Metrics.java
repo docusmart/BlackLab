@@ -1,4 +1,4 @@
-package nl.inl.blacklab.server;
+package nl.inl.blacklab.instrumentation;
 
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
@@ -119,7 +119,6 @@ public class Metrics {
             return registry;
         }
 
-
         // Add cloudwatch metrics on ec2 instances only
         Optional<Map<String, String>> tags = getInstanceTags();
         if (!tags.isPresent()) {
@@ -191,7 +190,7 @@ public class Metrics {
         }
     }
 
-    protected static boolean handlePrometheus(HttpServletRequest request, HttpServletResponse responseObject) {
+    protected static boolean handlePrometheus(HttpServletRequest request, HttpServletResponse responseObject, String charEncoding) {
         // Metrics scrapping endpoint
         if (!request.getRequestURI().contains("/metrics")) {
             return false;
@@ -205,7 +204,7 @@ public class Metrics {
             try {
                 registry.scrape(responseObject.getWriter());
                 responseObject.setStatus(HttpServletResponse.SC_OK);
-                responseObject.setCharacterEncoding(BlackLabServer.OUTPUT_ENCODING.name().toLowerCase());
+                responseObject.setCharacterEncoding(charEncoding);
                 responseObject.setContentType(TextFormat.CONTENT_TYPE_004);
             } catch (IOException exception) {
                 logger.error("Can't scrape prometheus metrics", exception);
