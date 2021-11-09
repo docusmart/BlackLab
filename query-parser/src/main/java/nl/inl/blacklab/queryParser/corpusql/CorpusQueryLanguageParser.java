@@ -59,7 +59,6 @@ public class CorpusQueryLanguageParser {
 
     TextPattern simplePattern(String str) {
         // Treat everything like regex now; will be simplified later if possible
-        //TODO(eginez) some tests are breaking if we merge upstream
         return new TextPatternRegex(str);
     }
 
