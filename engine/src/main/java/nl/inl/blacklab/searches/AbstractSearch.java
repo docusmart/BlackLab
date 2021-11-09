@@ -10,7 +10,6 @@ import nl.inl.blacklab.exceptions.InterruptedSearch;
 import nl.inl.blacklab.exceptions.InvalidQuery;
 import nl.inl.blacklab.search.results.QueryInfo;
 import nl.inl.blacklab.search.results.SearchResult;
-import org.apache.logging.log4j.ThreadContext;
 
 /**
  * Abstract base class for all Search implementations,
@@ -29,9 +28,6 @@ public abstract class AbstractSearch<R extends SearchResult> implements Search<R
 
     @Override
     public SearchCacheEntry<R> executeAsync(boolean allowQueue) {
-        //TODO(eginez) Fix this
-        final String requestId = ThreadContext.get("requestId");
-        ThreadContext.put("requestId", requestId);
         SearchCacheEntry<R> future = queryInfo.index().cache().getAsync(this, allowQueue);
         return future;
     }

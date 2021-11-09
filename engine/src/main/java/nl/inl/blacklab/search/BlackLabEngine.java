@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.lucene.index.IndexReader;
 
 import nl.inl.blacklab.exceptions.ErrorOpeningIndex;
@@ -48,6 +49,7 @@ public final class BlackLabEngine implements Closeable {
 
     BlackLabEngine(int searchThreads, int maxThreadsPerSearch) {
         initializationExecutorService = Executors.newSingleThreadExecutor();
+        //TODO(eginez) we change the executor service
         this.searchExecutorService = Executors.newCachedThreadPool(new ThreadFactory() {
 			@Override
 			public Thread newThread(Runnable runnable) {
