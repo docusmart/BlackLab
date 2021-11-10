@@ -81,20 +81,11 @@ import nl.inl.blacklab.server.util.BlsUtils;
  */
 public class RequestHandlerHits extends RequestHandler {
 
-    //TODO(eginez) Can we upstream these changes?
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
-    private static final String ANN_DOC_COUNT_HEADER = "X-Ann-Doc-Count";
-    private final String ruleId;
-    private final String annDocCount;
 
     public RequestHandlerHits(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
         super(servlet, request, user, indexName, urlResource, urlPathPart);
-        ruleId = getRuleId().orElse("unknown");
-        String annCountHeader = request.getHeader(ANN_DOC_COUNT_HEADER);
-        annDocCount = annCountHeader == null ? "unknown" : annCountHeader;
-
-        logger.info("Will start search for rule id: {}", ruleId);
     }
 
     @SuppressWarnings("unchecked")
@@ -171,7 +162,8 @@ public class RequestHandlerHits extends RequestHandler {
         ds.startEntry("summary").startMap();
 
         long totalTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
-        logger.info("For rule:{}. Total execution time is:{} ms and docs:{}", ruleId, totalTime, annDocCount);
+        String inputDocs = getInstrumentationProvider().getRequestMetadata(request).getOrDefault("inputDocCount", "unknown");
+        logger.info("Total execution time is:{} ms and docs:{}", totalTime, inputDocs);
 
         // TODO timing is now broken because we always retrieve total and use a window on top of it,
         // so we can no longer differentiate the total time from the time to retrieve the requested window

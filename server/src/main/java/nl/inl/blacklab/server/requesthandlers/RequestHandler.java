@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import nl.inl.blacklab.instrumentation.RequestInstrumentationProvider;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.StringUtils;
@@ -80,11 +81,7 @@ public abstract class RequestHandler {
 
     public static final int HTTP_OK = HttpServletResponse.SC_OK;
 
-    // TODO(eginez) is there a way to up stream this changes?
-    // Header for Ann's requests IDs
-    private static final String ANN_REQUEST_ID_HEADER_NAME = "X-Request-ID";
-    // Header for Ann's rule IDs
-    private static final String ANN_RULE_ID_HEADER_NAME = "X-Ann-Rule-ID";
+    protected RequestInstrumentationProvider instrumentationProvider;
 
     /** The available request handlers by name */
     static Map<String, Class<? extends RequestHandler>> availableHandlers;
@@ -125,7 +122,7 @@ public abstract class RequestHandler {
      * @return the response data
      */
     public static RequestHandler create(BlackLabServer servlet, HttpServletRequest request, boolean debugMode,
-            DataFormat outputType) {
+            DataFormat outputType, RequestInstrumentationProvider instrumentationProvider) {
 
         // See if a user is logged in
         SearchManager searchManager = servlet.getSearchManager();
@@ -369,6 +366,9 @@ public abstract class RequestHandler {
         if (debugMode)
             requestHandler.setDebug(debugMode);
 
+        requestHandler.setInstrumentationProvider(instrumentationProvider);
+        requestHandler.setRequestId();
+
         return requestHandler;
     }
 
@@ -434,6 +434,8 @@ public abstract class RequestHandler {
 
     protected IndexManager indexMan;
 
+    private RequestInstrumentationProvider requestInstrumentation;
+
     RequestHandler(BlackLabServer servlet, HttpServletRequest request, User user, String indexName, String urlResource,
             String urlPathInfo) {
         this.servlet = servlet;
@@ -443,7 +445,6 @@ public abstract class RequestHandler {
         String pathAndQueryString = ServletUtil.getPathAndQueryString(request);
 
         if (!(this instanceof RequestHandlerStaticResponse) && !pathAndQueryString.startsWith("/cache-info")) { // annoying when monitoring
-            setRequestIds();
             logger.info(ServletUtil.shortenIpv6(request.getRemoteAddr()) + " " + user.uniqueIdShort() + " "
                     + request.getMethod() + " " + pathAndQueryString);
         }
@@ -457,23 +458,16 @@ public abstract class RequestHandler {
 
     }
 
-    protected String getAnnRequestId() {
-        String requestId = request.getHeader(ANN_REQUEST_ID_HEADER_NAME);
-        if (requestId == null) {
-            requestId = "unknown";
-        }
-        return  requestId;
-    }
-    protected Optional<String> getRuleId() {
-        String ruleId = request.getHeader(ANN_RULE_ID_HEADER_NAME);
-        return Optional.ofNullable(ruleId);
+    protected void setRequestId() {
+        getInstrumentationProvider().getRequestID(request).ifPresent(reqId -> ThreadContext.put("requestId", reqId));
     }
 
-    protected void setRequestIds() {
-        // During search requests request id is acquired from the rule id header
-        String reqId = getRuleId().orElse(
-            Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes()));
-        ThreadContext.put("requestId", String.format("%s/%s", getAnnRequestId(), reqId));
+    public RequestInstrumentationProvider getInstrumentationProvider() {
+        return instrumentationProvider;
+    }
+
+    public void setInstrumentationProvider(RequestInstrumentationProvider instrumentationProvider) {
+        this.instrumentationProvider = instrumentationProvider;
     }
 
     public void cleanup() {

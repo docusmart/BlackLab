@@ -10,8 +10,11 @@ public class BLSConfigDebug {
     /** Run all local requests in debug mode */
     boolean alwaysAllowDebugInfo = false;
 
-    /** For instrumentation and metrics gathering purpouses */
+    /** For metrics gathering purpouses */
     String metricsProvider = "";
+
+    /** For instrumentation purpouses */
+    String requestInstrumentationProvider = "";
 
     public List<String> getAddresses() {
         return addresses;
@@ -42,5 +45,13 @@ public class BLSConfigDebug {
 
     public void setMetricsProviderName(String metricsProviderName) {
         this.metricsProvider = metricsProviderName;
+    }
+
+    public String getRequestInstrumentationProvider() {
+        return requestInstrumentationProvider;
+    }
+
+    public void setRequestInstrumentationProvider(String requestInstrumentationProvider) {
+        this.requestInstrumentationProvider = requestInstrumentationProvider;
     }
 }
