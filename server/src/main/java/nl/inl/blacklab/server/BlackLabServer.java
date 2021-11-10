@@ -17,6 +17,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+import nl.inl.blacklab.instrumentation.MetricsProvider;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -89,11 +93,32 @@ public class BlackLabServer extends HttpServlet {
 
             // Set default parameter settings from config
             SearchParameters.setDefaults(config.getParameters());
+            setInstrumentation(config);
 
         } catch (JsonProcessingException e) {
             throw new ConfigurationException("Invalid JSON in configuration file", e);
         } catch (IOException e) {
             throw new ConfigurationException("Error reading configuration file", e);
+        }
+    }
+
+    private void setInstrumentation(BLSConfig config) throws ConfigurationException {
+        String registryProviderClassName = config.getDebug().getMetricsProvider();
+        if ( StringUtils.isBlank(registryProviderClassName)) {
+            return;
+        }
+
+        String fqClassName = registryProviderClassName.startsWith("nl.inl.blacklab.instrumentation")
+            ? registryProviderClassName
+            : String.format("nl.inl.blacklab.instrumentation.impl.%s", registryProviderClassName);
+
+        try {
+            MetricsProvider meterRegistryProvider = (MetricsProvider)
+                Class.forName(fqClassName).getDeclaredConstructor().newInstance();
+            MeterRegistry registry = meterRegistryProvider.getRegistry();
+            Metrics.addRegistry(registry);
+        } catch (Exception ex) {
+            throw new ConfigurationException("Can not create metrics provider with class" + fqClassName);
         }
     }
 

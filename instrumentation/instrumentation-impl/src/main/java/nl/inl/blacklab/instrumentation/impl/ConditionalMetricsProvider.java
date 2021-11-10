@@ -1,12 +1,10 @@
-package nl.inl.blacklab.instrumentation;
+package nl.inl.blacklab.instrumentation.impl;
 
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
 import io.micrometer.core.instrument.Clock;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmHeapPressureMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
@@ -14,9 +12,10 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.tomcat.TomcatMetrics;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.exporter.common.TextFormat;
+import nl.inl.blacklab.instrumentation.MetricsProvider;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.regions.Region;
@@ -32,9 +31,6 @@ import software.amazon.awssdk.services.ec2.model.DescribeTagsResponse;
 import software.amazon.awssdk.services.ec2.model.Filter;
 import software.amazon.awssdk.services.ec2.model.TagDescription;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,14 +39,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-import java.util.function.ToDoubleFunction;
-import java.util.function.ToLongFunction;
 
-public class Metrics {
-    private static final Logger logger = LogManager.getLogger(Metrics.class);
-    static final String CW_NAMESPACE = "Blacklab";
-    static final String CW_NAMESPACE_PROPERTY = "metrics.cloudwatch.namespace";
-    static final String METRICS_ENABLED = "metrics.enabled";
+/**
+ * ConditionalMetricsProvider creates a registry dependent on the enviroment it
+ * is being deployed on. On aws instances it will default to cloudwatch,
+ * otherwise it will use Prometheus as the metrics backend.
+ */
+public class ConditionalMetricsProvider implements MetricsProvider {
+
+    private static final Logger logger = LogManager.getLogger(ConditionalMetricsProvider.class);
+    private static final String CW_NAMESPACE = "Blacklab";
+    private static final String CW_NAMESPACE_PROPERTY = "metrics.cloudwatch.namespace";
+    private final MeterRegistry registry;
 
     /**
      * CustomCWClient injects base dimensions to all metrics published to CloudWatch
@@ -58,16 +58,18 @@ public class Metrics {
     private static class CustomCWClient implements CloudWatchAsyncClient {
         private final CloudWatchAsyncClient client = CloudWatchAsyncClient.builder().build();
         private final List<Dimension> hostDimensions = new ArrayList<>();
+        private final CloudWatchConfig cwConfig;
 
-        public CustomCWClient(Map<String, String> instanceTags) {
+        public CustomCWClient(Map<String, String> instanceTags, CloudWatchConfig cwConfig) {
             hostDimensions.add(fromOptional("Application",
-                    () -> Optional.ofNullable(System.getenv("APPLICATION")), "Blacklab"));
+                () -> Optional.ofNullable(System.getenv("APPLICATION")), "Blacklab"));
             hostDimensions.add(fromOptional("ContainerId",
-                    () -> Optional.ofNullable(System.getenv("HOSTNAME")), "Unknown"));
+                () -> Optional.ofNullable(System.getenv("HOSTNAME")), "Unknown"));
             hostDimensions.add(fromOptional("Environment",
-                    () -> Optional.ofNullable(instanceTags.get("Environment")), "Unknown"));
+                () -> Optional.ofNullable(instanceTags.get("Environment")), "Unknown"));
             hostDimensions.add(fromOptional("InstanceId",
-                    () -> Optional.ofNullable(instanceTags.get("InstanceId")), "Unknown"));
+                () -> Optional.ofNullable(instanceTags.get("InstanceId")), "Unknown"));
+            this.cwConfig = cwConfig;
             logger.info("Will publish CloudWatch metrics with the following dimensions: " + hostDimensions);
         }
 
@@ -76,7 +78,7 @@ public class Metrics {
             return Dimension.builder().name(dimensionName).value(value).build();
         }
 
-    @Override
+        @Override
         public String serviceName() {
             return client.serviceName();
         }
@@ -93,59 +95,61 @@ public class Metrics {
                 ArrayList<Dimension> dimensions = new ArrayList<>(m.dimensions());
                 dimensions.addAll(hostDimensions);
                 MetricDatum newDatum = m.toBuilder()
-                        .dimensions(dimensions)
-                        .build();
+                    .dimensions(dimensions)
+                    .build();
                 newData.add(newDatum);
             }
 
             PutMetricDataRequest req = PutMetricDataRequest.builder()
-                    .namespace(Metrics.cloudWatchConfig().namespace())
-                    .metricData(newData)
-                    .build();
+                .namespace(cwConfig.namespace())
+                .metricData(newData)
+                .build();
 
             return client.putMetricData(req);
         }
     }
 
-    /**
-     * Registry for metrics. Define to metrics backend
-     **/
-    final static CompositeMeterRegistry metricsRegistry = init();
-
-    private static CompositeMeterRegistry init() {
-        CompositeMeterRegistry registry = new CompositeMeterRegistry();
+    public ConditionalMetricsProvider() {
         if (!metricsEnabled()) {
             logger.info("Metrics are disabled. No metrics will be published.");
-            return registry;
+            registry = new SimpleMeterRegistry();
+            return;
         }
 
         // Add cloudwatch metrics on ec2 instances only
         Optional<Map<String, String>> tags = getInstanceTags();
         if (!tags.isPresent()) {
             logger.info("No EC2 information. Will not publish metrics to CloudWatch");
-            registry.add(new PrometheusMeterRegistry(PrometheusConfig.DEFAULT));
+            registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
             logger.info("Publishing metrics to Prometheus");
         } else {
+            CloudWatchConfig config = getCloudWatchConfig();
             logger.info("Found EC2 information. Will publish to CloudWatch");
-            registry.add(new CloudWatchMeterRegistry(cloudWatchConfig(), Clock.SYSTEM, new CustomCWClient(tags.get())));
+            registry = new CloudWatchMeterRegistry(config, Clock.SYSTEM, new CustomCWClient(tags.get(), config));
         }
 
+        addSystemMetrics();
+    }
+
+    /**
+     * Adds metrics to measure the behaviour of the underlying JVM.
+     * In addition, adds metrics to measure Tomcat.
+     */
+    private void addSystemMetrics() {
         new JvmMemoryMetrics().bindTo(registry);
         new JvmGcMetrics().bindTo(registry);
         new JvmHeapPressureMetrics().bindTo(registry);
         new JvmThreadMetrics().bindTo(registry);
         new ProcessorMetrics().bindTo(registry);
         new TomcatMetrics(null, Tags.empty()).bindTo(registry);
+    }
+
+    @Override
+    public MeterRegistry getRegistry() {
         return registry;
     }
 
-    public static boolean metricsEnabled() {
-        String result = System.getProperty(METRICS_ENABLED, "true");
-        boolean disabled = result.equalsIgnoreCase("false");
-        return !disabled;
-    }
-
-    private static CloudWatchConfig cloudWatchConfig(){
+    private CloudWatchConfig getCloudWatchConfig(){
         final Map<String, String> props = new HashMap<>();
         props.put("cloudwatch.namespace", System.getProperty(CW_NAMESPACE_PROPERTY, CW_NAMESPACE));
         props.put("cloudwatch.step", Duration.ofMinutes(1).toString());
@@ -159,7 +163,7 @@ public class Metrics {
         };
     }
 
-    private static Optional<Map<String, String>> getInstanceTags() {
+    private Optional<Map<String, String>> getInstanceTags() {
         try {
             EC2MetadataUtils.InstanceInfo instanceInfo = EC2MetadataUtils.getInstanceInfo();
             if (instanceInfo == null) {
@@ -168,13 +172,13 @@ public class Metrics {
             }
 
             Ec2Client ec2 = Ec2Client.builder()
-                    .region(Region.US_WEST_2)
-                    .build();
+                .region(Region.US_WEST_2)
+                .build();
 
             Filter filter = Filter.builder()
-                    .name("resource-id")
-                    .values(instanceInfo.getInstanceId())
-                    .build();
+                .name("resource-id")
+                .values(instanceInfo.getInstanceId())
+                .build();
 
             DescribeTagsResponse describeTagsResponse = ec2.describeTags(DescribeTagsRequest.builder().filters(filter).build());
             List<TagDescription> tags = describeTagsResponse.tags();
@@ -189,45 +193,4 @@ public class Metrics {
             return Optional.empty();
         }
     }
-
-    protected static boolean handlePrometheus(HttpServletRequest request, HttpServletResponse responseObject, String charEncoding) {
-        // Metrics scrapping endpoint
-        if (!request.getRequestURI().contains("/metrics")) {
-            return false;
-        }
-
-        Optional<PrometheusMeterRegistry> reg = metricsRegistry.getRegistries().stream()
-                .filter(r -> r instanceof PrometheusMeterRegistry)
-                .map(t -> (PrometheusMeterRegistry) t)
-                .findFirst();
-        reg.ifPresent((PrometheusMeterRegistry registry) -> {
-            try {
-                registry.scrape(responseObject.getWriter());
-                responseObject.setStatus(HttpServletResponse.SC_OK);
-                responseObject.setCharacterEncoding(charEncoding);
-                responseObject.setContentType(TextFormat.CONTENT_TYPE_004);
-            } catch (IOException exception) {
-                logger.error("Can't scrape prometheus metrics", exception);
-            }
-        });
-        return true;
-    }
-
-    public static Timer createTimer(String name, String description, Iterable<Tag> tags){
-        return Timer.builder(name)
-                .description(description)
-                .tags(tags)
-                .register(Metrics.metricsRegistry);
-    }
-
-    public static <T> ToDoubleFunction<T> toDoubleFn(ToLongFunction<T> intGenerator) {
-        return  (T obj) -> (double) intGenerator.applyAsLong(obj);
-    }
-    public static <T> Gauge createGauge(String name, String description, Tags tags, T obj, ToDoubleFunction<T> f) {
-        return Gauge.builder(name, obj, f)
-                .description(description)
-                .tags(tags)
-                .register(Metrics.metricsRegistry);
-    }
 }
-
