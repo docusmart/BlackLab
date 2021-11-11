@@ -203,13 +203,13 @@ public class BlackLabServer extends HttpServlet {
     }
 
 	private void handleRequest(HttpServletRequest request, HttpServletResponse responseObject) {
-            try {
-                request.setCharacterEncoding("utf-8");
-            } catch (UnsupportedEncodingException ex) {
-                logger.warn(ex.getMessage(),ex);
-            }
+        try {
+            request.setCharacterEncoding("utf-8");
+        } catch (UnsupportedEncodingException ex) {
+            logger.warn(ex.getMessage(),ex);
+        }
 
-	    try {
+        try {
             request.setCharacterEncoding("utf-8");
         } catch (UnsupportedEncodingException ex) {
             logger.error(ex);
