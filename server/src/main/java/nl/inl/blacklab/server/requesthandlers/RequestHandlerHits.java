@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -250,13 +249,24 @@ public class RequestHandlerHits extends RequestHandler {
 
             if (contextSettings.concType() == ConcordanceType.CONTENT_STORE) {
                 // Add concordance from original XML
-                //TODO(eginez) change in output shape?
                 Concordance c = concordances.get(hit);
-                ds.startEntry("match").plain(c.match()).endEntry();
+                if (searchMan.config().getParameters().isAddSurroundingWordsToHits()) {
+                    ds.startEntry("left").plain(c.left()).endEntry()
+                        .startEntry("match").plain(c.match()).endEntry()
+                        .startEntry("right").plain(c.right()).endEntry();
+                } else {
+                    ds.startEntry("match").plain(c.match()).endEntry();
+                }
             } else {
                 // Add KWIC info
                 Kwic c = kwics.get(hit);
-                ds.startEntry("match").contextList(c.annotations(), annotationsToList, c.match()).endEntry();
+                if (searchMan.config().getParameters().isAddSurroundingWordsToHits()) {
+                    ds.startEntry("left").contextList(c.annotations(), annotationsToList, c.left()).endEntry()
+                        .startEntry("match").contextList(c.annotations(), annotationsToList, c.match()).endEntry()
+                        .startEntry("right").contextList(c.annotations(), annotationsToList, c.right()).endEntry();
+                } else {
+                    ds.startEntry("match").contextList(c.annotations(), annotationsToList, c.match()).endEntry();
+                }
             }
             ds.endMap().endItem();
         }
