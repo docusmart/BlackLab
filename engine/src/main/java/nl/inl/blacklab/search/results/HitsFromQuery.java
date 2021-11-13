@@ -332,7 +332,7 @@ public class HitsFromQuery extends Hits {
                     }
                     if (!maxHitsProcessed) {
                         Hit hit = Hit.create(currentSourceSpans.docID() + currentDocBase, currentSourceSpans.startPosition(), currentSourceSpans.endPosition(), hitsResultsContext.hitsArrays.size());
-                        if (capturedGroups != null) {
+                        if (hitsResultsContext.capturedGroups != null) {
                             Span[] groups = new Span[hitQueryContext.numberOfCapturedGroups()];
                             hitQueryContext.getCapturedGroups(groups);
                             hitsResultsContext.capturedGroups.put(hit, groups);
