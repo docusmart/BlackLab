@@ -201,6 +201,7 @@ public class HitsFromQuery extends Hits {
     // we are not using the hitsArray change.
     @Override
     protected void ensureResultsRead(int number) {
+        final long startTime = System.currentTimeMillis();
         try {
             HitsResultsContext hitsResultsContext = this.hitsResultsContext; // Volatile read memory-barrier
 
@@ -357,6 +358,7 @@ public class HitsFromQuery extends Hits {
         } catch (InterruptedException e) {
             throw new InterruptedSearch(e);
         }
+        logger.warn("EGZ... Took {} ms", System.currentTimeMillis() - startTime);
     }
 
     private void setFinished() {
