@@ -125,6 +125,8 @@ public abstract class RequestHandler {
             DataFormat outputType, RequestInstrumentationProvider instrumentationProvider) {
 
         // See if a user is logged in
+        String requestId = instrumentationProvider.getRequestID(request).orElse("");
+        ThreadContext.put("requestId", requestId);
         SearchManager searchManager = servlet.getSearchManager();
         User user = searchManager.getAuthSystem().determineCurrentUser(servlet, request);
         String debugHttpHeaderToken = searchManager.config().getAuthentication().getDebugHttpHeaderAuthToken();
@@ -367,7 +369,7 @@ public abstract class RequestHandler {
             requestHandler.setDebug(debugMode);
 
         requestHandler.setInstrumentationProvider(instrumentationProvider);
-        requestHandler.setRequestId();
+        requestHandler.setRequestId(requestId);
 
         return requestHandler;
     }
@@ -436,6 +438,8 @@ public abstract class RequestHandler {
 
     private RequestInstrumentationProvider requestInstrumentation;
 
+    private String requestId;
+
     RequestHandler(BlackLabServer servlet, HttpServletRequest request, User user, String indexName, String urlResource,
             String urlPathInfo) {
         this.servlet = servlet;
@@ -458,8 +462,8 @@ public abstract class RequestHandler {
 
     }
 
-    protected void setRequestId() {
-        getInstrumentationProvider().getRequestID(request).ifPresent(reqId -> ThreadContext.put("requestId", reqId));
+    protected void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 
     public RequestInstrumentationProvider getInstrumentationProvider() {
