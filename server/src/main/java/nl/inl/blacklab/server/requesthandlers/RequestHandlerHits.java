@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.BooleanClause.Occur;
@@ -136,8 +137,15 @@ public class RequestHandlerHits extends RequestHandler {
         if (!hits.hitsStats().processedAtLeast(windowSettings.first()))
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
 
-        Hits window = hits.window(windowSettings.first(), windowSettings.size());
-
+        // Request the window of hits we're interested in.
+        // (we hold on to the cache entry so that we can differentiate between search and count time later)
+        BlsCacheEntry<Hits> cacheEntryWindow = (BlsCacheEntry<Hits>)searchParam.hitsWindow().executeAsync();
+        Hits window;
+        try {
+            window = cacheEntryWindow.get(); // blocks until requested hits window is available
+        } catch (InterruptedException | ExecutionException e) {
+            throw RequestHandler.translateSearchException(e);
+        }
 
         DocResults perDocResults = null;
 
@@ -153,21 +161,33 @@ public class RequestHandlerHits extends RequestHandler {
 
         searchLogger.setResultsFound(hitsCount.processedSoFar());
 
+
+        // Find KWICs/concordances from forward index or original XML
+        // (note that on large indexes, this can actually take significant time)
+        long startTimeKwicsMs = System.currentTimeMillis();
+        ContextSettings contextSettings = searchParam.getContextSettings();
+        Concordances concordances = null;
+        Kwics kwics = null;
+        if (contextSettings.concType() == ConcordanceType.CONTENT_STORE)
+            concordances = window.concordances(contextSettings.size(), ConcordanceType.CONTENT_STORE);
+        else
+            kwics = window.kwics(contextSettings.size());
+        long kwicTimeMs = System.currentTimeMillis() - startTimeKwicsMs;
+
         // Search is done; construct the results object
 
         ds.startMap();
 
         // The summary
         ds.startEntry("summary").startMap();
-
-        long totalTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
+        // Search time should be time user (originally) had to wait for the response to this request.
+        // Count time is the time it took (or is taking) to iterate through all the results to count the total.
+        long searchTime = cacheEntryWindow.timeUserWaitedMs() + kwicTimeMs;
+        long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
         String inputDocs = getInstrumentationProvider().getRequestMetadata(request).getOrDefault("inputDocCount", "unknown");
-        logger.info("Total execution time is:{} ms and docs:{}", totalTime, inputDocs);
-
-        // TODO timing is now broken because we always retrieve total and use a window on top of it,
-        // so we can no longer differentiate the total time from the time to retrieve the requested window
-        addSummaryCommonFields(ds, searchParam, cacheEntry.timeUserWaitedMs(), totalTime, null, window.windowStats());
-        addNumberOfResultsSummaryTotalHits(ds, hitsCount, docsCount, totalTime < 0, null);
+        logger.info("Total search time is:{} ms and docs:{}", searchTime, inputDocs);
+        addSummaryCommonFields(ds, searchParam, searchTime, countTime, null, window.windowStats());
+        addNumberOfResultsSummaryTotalHits(ds, hitsCount, docsCount, countTime < 0, null);
         if (includeTokenCount)
             ds.entry("tokensInMatchingDocuments", totalTokens);
 
@@ -199,16 +219,9 @@ public class RequestHandlerHits extends RequestHandler {
         ds.endMap().endEntry();
 
         ds.startEntry("hits").startList();
-        Map<Integer, String> pids = new HashMap<>();
-        ContextSettings contextSettings = searchParam.getContextSettings();
-        Concordances concordances = null;
-        Kwics kwics = null;
-        Set<Annotation> annotationsToList = new HashSet<>(getAnnotationsToWrite());
-        if (contextSettings.concType() == ConcordanceType.CONTENT_STORE)
-            concordances = window.concordances(contextSettings.size(), ConcordanceType.CONTENT_STORE);
-        else
-            kwics = window.kwics(contextSettings.size());
 
+        Map<Integer, String> pids = new HashMap<>();
+        Set<Annotation> annotationsToList = new HashSet<>(getAnnotationsToWrite());
         Set<MetadataField> metadataFieldsTolist = new HashSet<>(this.getMetadataToWrite());
         for (Hit hit : window) {
             ds.startItem("hit").startMap();
