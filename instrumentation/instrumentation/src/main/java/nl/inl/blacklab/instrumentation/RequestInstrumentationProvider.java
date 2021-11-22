@@ -18,8 +18,6 @@ public interface RequestInstrumentationProvider {
      */
     Optional<String> getRequestID(HttpServletRequest request);
 
-    Map<String, String> getRequestMetadata(HttpServletRequest request);
-
     /**
      * A RequestIdProvider that does not create a request id
      */
@@ -28,11 +26,6 @@ public interface RequestInstrumentationProvider {
             @Override
             public Optional<String> getRequestID(HttpServletRequest request) {
                 return Optional.empty();
-            }
-
-            @Override
-            public Map<String, String> getRequestMetadata(HttpServletRequest request) {
-                return Collections.emptyMap();
             }
         };
     }

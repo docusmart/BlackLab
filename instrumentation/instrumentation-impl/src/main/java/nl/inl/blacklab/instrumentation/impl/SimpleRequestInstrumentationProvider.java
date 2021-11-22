@@ -19,14 +19,6 @@ public class SimpleRequestInstrumentationProvider implements RequestInstrumentat
         return Optional.of(buildRequestId(request));
     }
 
-    @Override
-    public Map<String, String> getRequestMetadata(HttpServletRequest request) {
-        String docCount = request.getHeader(DOC_COUNT);
-        Map<String, String> metadata = new HashMap<>();
-        metadata.put("inputDocCount", docCount);
-        return metadata;
-    }
-
     private String buildRequestId(HttpServletRequest request) {
         String reqId = getQueryId(request).orElse(
             Base64.getUrlEncoder().encodeToString(UUID.randomUUID().toString().getBytes()));

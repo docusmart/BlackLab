@@ -184,8 +184,7 @@ public class RequestHandlerHits extends RequestHandler {
         // Count time is the time it took (or is taking) to iterate through all the results to count the total.
         long searchTime = cacheEntryWindow.timeUserWaitedMs() + kwicTimeMs;
         long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
-        String inputDocs = getInstrumentationProvider().getRequestMetadata(request).getOrDefault("inputDocCount", "unknown");
-        logger.info("Total search time is:{} ms and docs:{}", searchTime, inputDocs);
+        logger.info("Total search time is:{} ms", searchTime);
         addSummaryCommonFields(ds, searchParam, searchTime, countTime, null, window.windowStats());
         addNumberOfResultsSummaryTotalHits(ds, hitsCount, docsCount, countTime < 0, null);
         if (includeTokenCount)
