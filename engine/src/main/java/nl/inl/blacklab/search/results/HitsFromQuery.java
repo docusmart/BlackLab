@@ -197,8 +197,6 @@ public class HitsFromQuery extends Hits {
      *            method returns (unless there are fewer hits than this); if
      *            negative, reads all hits
      */
-    //TODO Lexion change, this method and the whole class needs check as
-    // we are not using the hitsArray change.
     @Override
     protected void ensureResultsRead(int number) {
         try {
