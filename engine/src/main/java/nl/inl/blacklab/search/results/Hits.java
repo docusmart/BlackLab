@@ -8,6 +8,7 @@ import java.util.TreeSet;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.logging.log4j.LogManager;
@@ -29,13 +30,15 @@ import nl.inl.util.Sort;
 import nl.inl.util.Sort.Sortable;
 
 public abstract class Hits extends Results<Hit, HitProperty> {
+
     public static class EphemeralHit implements Hit {
         public int doc = -1;
         public int start = -1;
         public int end = -1;
+        public int index = -1;
 
         public HitImpl toHit() {
-            return new HitImpl(doc, start, end);
+            return new HitImpl(doc, start, end, index);
         }
 
         @Override
@@ -51,6 +54,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         @Override
         public int end() {
             return end;
+        }
+
+        @Override
+        public int index() {
+            return index;
         }
     }
 
@@ -80,6 +88,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 this.hit.doc = this.hits.docs.get(pos);
                 this.hit.start = this.hits.starts.get(pos);
                 this.hit.end = this.hits.ends.get(pos);
+                this.hit.index = this.hits.indicesFromResultSet.get(pos);
                 ++this.pos;
                 return this.hit;
             }
@@ -102,14 +111,23 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         private final IntArrayList docs;
         private final IntArrayList starts;
         private final IntArrayList ends;
+        private final IntArrayList indicesFromResultSet;
 
         public HitsArrays() {
             this.docs = new IntArrayList();
             this.starts = new IntArrayList();
             this.ends = new IntArrayList();
+            this.indicesFromResultSet = new IntArrayList();
         }
 
-        public HitsArrays(IntArrayList docs, IntArrayList starts, IntArrayList ends) {
+        public HitsArrays(HitsArrays toCopy) {
+            this.docs = new IntArrayList(toCopy.docs.toArray());
+            this.starts = new IntArrayList(toCopy.starts.toArray());
+            this.ends = new IntArrayList(toCopy.ends.toArray());
+            this.indicesFromResultSet = new IntArrayList(toCopy.indicesFromResultSet.toArray());
+        }
+
+        public HitsArrays(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indicesFromResultSet) {
             if (docs == null || starts == null || ends == null)
                 throw new NullPointerException();
             if (docs.size() != starts.size() || docs.size() != ends.size())
@@ -118,21 +136,24 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             this.docs = docs;
             this.starts = starts;
             this.ends = ends;
+            this.indicesFromResultSet = indicesFromResultSet;
         }
 
-        public void add(int doc, int start, int end) {
+        public void add(int doc, int start, int end, int index) {
             this.lock.writeLock().lock();
             docs.add(doc);
             starts.add(start);
             ends.add(end);
+            indicesFromResultSet.add(index);
             this.lock.writeLock().unlock();
         }
 
-        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends) {
+        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indices) {
             this.lock.writeLock().lock();
             this.docs.addAll(docs);
             this.starts.addAll(starts);
             this.ends.addAll(ends);
+            this.indicesFromResultSet.addAll(indices);
             this.lock.writeLock().unlock();
         }
 
@@ -142,6 +163,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.add(hit.doc);
             starts.add(hit.start);
             ends.add(hit.end);
+            indicesFromResultSet.add(hit.index);
             this.lock.writeLock().unlock();
         }
 
@@ -151,6 +173,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.add(hit.doc());
             starts.add(hit.start());
             ends.add(hit.end());
+            indicesFromResultSet.add(hit.index());
             this.lock.writeLock().unlock();
         }
 
@@ -160,6 +183,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 docs.add(hit.doc());
                 starts.add(hit.start());
                 ends.add(hit.end());
+                indicesFromResultSet.add(hit.index());
             }
             this.lock.writeLock().unlock();
         }
@@ -170,6 +194,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             docs.addAll(hits.docs());
             starts.addAll(hits.starts());
             ends.addAll(hits.ends());
+            indicesFromResultSet.addAll(hits.indices());
             hits.lock.readLock().unlock();
             this.lock.writeLock().unlock();
         }
@@ -194,7 +219,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
         public HitImpl get(int index) {
             lock.readLock().lock();
-            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index));
+            HitImpl h = new HitImpl(docs.get(index), starts.get(index), ends.get(index), indicesFromResultSet.get(index));
             lock.readLock().unlock();
             return h;
         }
@@ -218,6 +243,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             h.doc = docs.get(index);
             h.start = starts.get(index);
             h.end = ends.get(index);
+            h.index = indicesFromResultSet.get(index);
             lock.readLock().unlock();
         }
 
@@ -282,6 +308,16 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             return ends;
         }
 
+
+        /**
+         * Expert use: get the internal indices on the original result set
+         * The array is not locked, so care should be taken when reading it.
+         * Best to wrap usage of this function and the returned in a withReadLock call.
+         *
+         * @return
+         */
+        public IntArrayList indices() { return indicesFromResultSet;}
+
         /** Note: iterating does not lock the arrays, to do that, it should be performed in a {@link #withReadLock} callback. */
         @Override
         public HitIterator iterator() {
@@ -345,17 +381,22 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         @Override
         public void add(Hit hit) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
-        public void add(int doc, int start, int end){throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
+        public void add(int doc, int start, int end, int index){throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
         public void addAll(HitsArrays hits) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
-        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
+        public void addAll(IntArrayList docs, IntArrayList starts, IntArrayList ends, IntArrayList indices) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
         @Override
         public void addAll(java.util.List<Hit> hits) {throw new BlackLabRuntimeException("Attempting to write into empty Hits object"); };
     };
 
 
-    protected final HitsArrays hitsArrays;
+    private final HitsArrays hitsArrays;
+
+    protected HitsArrays getHitsArrays() {
+        return hitsArrays;
+    }
+
 
     protected static final Logger logger = LogManager.getLogger(Hits.class);
 
@@ -389,8 +430,9 @@ public abstract class Hits extends Results<Hit, HitProperty> {
      * @param end hit ends
      * @return hits found
      */
-    public static Hits fromArrays(QueryInfo queryInfo, int[] docs, int[] starts, int[] ends) {
-        return new HitsList(queryInfo, new HitsArrays(new IntArrayList(docs), new IntArrayList(starts), new IntArrayList(ends)), null);
+    public static Hits fromArrays(QueryInfo queryInfo, int[] docs, int[] starts, int[] ends ) {
+        final int[] indices = IntStream.range(0, ends.length).toArray();
+        return new HitsList(queryInfo, new HitsArrays(new IntArrayList(docs), new IntArrayList(starts), new IntArrayList(ends), new IntArrayList(indices)), null);
     }
 
     public static Hits fromList(QueryInfo queryInfo, HitsArrays hits, CapturedGroups capturedGroups) {
@@ -468,25 +510,25 @@ public abstract class Hits extends Results<Hit, HitProperty> {
      * The number of hits we've seen and counted so far. May be more than the number
      * of hits we've retrieved if that exceeds maxHitsToRetrieve.
      */
-    protected int hitsCounted = 0;
+    private int hitsCounted = 0;
 
     /**
      * The number of separate documents we've seen in the hits retrieved.
      */
-    protected int docsRetrieved = 0;
+    private int docsRetrieved = 0;
 
     /**
      * The number of separate documents we've counted so far (includes non-retrieved
      * hits).
      */
-    protected int docsCounted = 0;
+    private int docsCounted = 0;
 
     private ResultsStats docsStats = new ResultsStats() {
 
         @Override
         public boolean processedAtLeast(int lowerBound) {
             while (!doneProcessingAndCounting() && docsProcessedSoFar() < lowerBound) {
-                ensureResultsRead(hitsArrays.size() + FETCH_HITS_MIN);
+                ensureResultsRead(getHitsArrays().size() + FETCH_HITS_MIN);
             }
             return docsProcessedSoFar() >= lowerBound;
         }
@@ -600,7 +642,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         MutableInt docsRetrieved = new MutableInt(0); // Bypass warning (enclosing scope must be effectively final)
         HitsArrays window = new HitsArrays();
 
-        this.hitsArrays.withReadLock(h -> {
+        this.getHitsArrays().withReadLock(h -> {
             int prevDoc = -1;
             EphemeralHit hit = new EphemeralHit();
             for (int i = first; i < first + number; i++) {
@@ -658,11 +700,11 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         CapturedGroups capturedGroups = hasCapturedGroups() ? new CapturedGroupsImpl(capturedGroups().names()) : null;
         HitsArrays sample = new HitsArrays();
 
-        this.hitsArrays.withReadLock(__ -> {
+        this.getHitsArrays().withReadLock(__ -> {
             int previousDoc = -1;
             EphemeralHit hit = new EphemeralHit();
             for (Integer hitIndex : chosenHitIndices) {
-                this.hitsArrays.getEphemeral(hitIndex, hit);
+                this.getHitsArrays().getEphemeral(hitIndex, hit);
                 if (hit.doc != previousDoc) {
                     docsInSample.add(1);
                     previousDoc = hit.doc;
@@ -671,12 +713,12 @@ public abstract class Hits extends Results<Hit, HitProperty> {
                 sample.add(hit);
                 if (capturedGroups != null) {
                     Hit h = hit.toHit();
-                    capturedGroups.put(h, this.capturedGroups.get(h));
+                    capturedGroups.put(h, capturedGroups().get(h));
                 }
             }
         });
 
-        return Hits.fromList(queryInfo(), sample, null, sampleParameters, sample.size(), docsInSample.getValue(), docsInSample.getValue(), capturedGroups);
+        return Hits.fromList(queryInfo(), sample, null, sampleParameters, sample.size(), docsInSample.getValue(), docsInSample.getValue(), capturedGroups());
     }
 
     /**
@@ -699,7 +741,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
         // Perform the actual sort.
         this.ensureAllResultsRead();
-        HitsArrays sorted = this.hitsArrays.sort(sortProp); // TODO use wrapper objects
+        HitsArrays sorted = this.getHitsArrays().sort(sortProp); // TODO use wrapper objects
 
         CapturedGroups capturedGroups = capturedGroups();
         int hitsCounted = hitsCountedSoFar();
@@ -738,13 +780,13 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     protected boolean resultsProcessedAtLeast(int lowerBound) {
-        return this.hitsArrays.size() >= lowerBound;
+        return this.getHitsArrays().size() >= lowerBound;
     }
 
     @Override
     protected int resultsProcessedTotal() {
         ensureResultsRead(-1);
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     @Override
@@ -754,7 +796,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     public int numberOfResultObjects() {
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     @Override
@@ -777,12 +819,12 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     public Iterator<EphemeralHit> ephemeralIterator() {
         ensureAllResultsRead();
-        return hitsArrays.iterator();
+        return getHitsArrays().iterator();
     }
 
     @Override
     public Hit get(int i) {
-        return this.hitsArrays.get(i);
+        return this.getHitsArrays().get(i);
     }
 
     /**
@@ -869,7 +911,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
         ensureAllResultsRead();
         HitsArrays r = new HitsArrays();
         // all hits read, no lock needed.
-        for (EphemeralHit h : this.hitsArrays) {
+        for (EphemeralHit h : this.getHitsArrays()) {
             if (h.doc == docid)
                 r.add(h);
         }
@@ -884,21 +926,21 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     protected boolean hitsProcessedAtLeast(int lowerBound) {
-        return this.hitsArrays.size() >= lowerBound;
+        return this.getHitsArrays().size() >= lowerBound;
     }
 
     protected int hitsProcessedTotal() {
         ensureAllResultsRead();
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     protected int hitsProcessedSoFar() {
-        return this.hitsArrays.size();
+        return this.getHitsArrays().size();
     }
 
     protected int hitsCountedTotal() {
         ensureAllResultsRead();
-        return hitsCounted;
+        return getHitsCounted();
     }
 
     public ResultsStats docsStats() {
@@ -907,24 +949,24 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     protected int docsProcessedTotal() {
         ensureAllResultsRead();
-        return docsRetrieved;
+        return getDocsRetrieved();
     }
 
     protected int docsCountedTotal() {
         ensureAllResultsRead();
-        return docsCounted;
+        return getDocsCounted();
     }
 
     protected int hitsCountedSoFar() {
-        return hitsCounted;
+        return getHitsCounted();
     }
 
     protected int docsCountedSoFar() {
-        return docsCounted;
+        return getDocsCounted();
     }
 
     protected int docsProcessedSoFar() {
-        return docsRetrieved;
+        return getDocsRetrieved();
     }
 
     // Deriving other Hits / Results instances
@@ -934,13 +976,13 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     public Hits window(Hit hit) {
         int size = this.size();
 
-        boolean isLastHit = this.hitsArrays.get(this.hitsArrays.size() - 1).equals(hit);
+        boolean isLastHit = this.getHitsArrays().get(this.getHitsArrays().size() - 1).equals(hit);
         boolean hasMoreHits = isLastHit ? resultsProcessedAtLeast(size + 1) : true;
 
         CapturedGroups capturedGroups = null;
-        if (this.capturedGroups != null) {
-            capturedGroups = new CapturedGroupsImpl(this.capturedGroups.names());
-            capturedGroups.put(hit, this.capturedGroups.get(hit));
+        if (this.capturedGroups() != null) {
+            capturedGroups = new CapturedGroupsImpl(this.capturedGroups().names());
+            capturedGroups.put(hit, this.capturedGroups().get(hit));
         }
 
         HitsArrays r = new HitsArrays();
@@ -965,7 +1007,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     public boolean hasCapturedGroups() {
-        return capturedGroups != null;
+        return capturedGroups() != null;
     }
 
     // Hits display
@@ -986,6 +1028,30 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     }
 
     public HitsArrays hitsArrays() {
-        return hitsArrays;
+        return getHitsArrays();
+    }
+
+    protected int getHitsCounted() {
+        return hitsCounted;
+    }
+
+    protected void setHitsCounted(int hitsCounted) {
+        this.hitsCounted = hitsCounted;
+    }
+
+    protected int getDocsRetrieved() {
+        return docsRetrieved;
+    }
+
+    protected void setDocsRetrieved(int docsRetrieved) {
+        this.docsRetrieved = docsRetrieved;
+    }
+
+    protected int getDocsCounted() {
+        return docsCounted;
+    }
+
+    protected void setDocsCounted(int docsCounted) {
+        this.docsCounted = docsCounted;
     }
 }

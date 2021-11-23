@@ -25,14 +25,14 @@ public class HitsList extends Hits {
         super(queryInfo, hits);
         this.capturedGroups = capturedGroups;
 
-        hitsCounted = this.hitsArrays.size();
+        setHitsCounted(this.getHitsArrays().size());
         int prevDoc = -1;
-        MutableIntIterator it = this.hitsArrays.docs().intIterator();
+        MutableIntIterator it = this.getHitsArrays().docs().intIterator();
         while (it.hasNext()) {
             int docId = it.next();
             if (docId != prevDoc) {
-                docsRetrieved++;
-                docsCounted++;
+                setDocsRetrieved(getDocsRetrieved() + 1);
+                setDocsCounted(getDocsCounted() + 1);
                 prevDoc = docId;
             }
         }
@@ -56,9 +56,9 @@ public class HitsList extends Hits {
         super(queryInfo, hits);
         this.windowStats = windowStats;
         this.sampleParameters = sampleParameters;
-        this.hitsCounted = hitsCounted;
-        this.docsRetrieved = docsRetrieved;
-        this.docsCounted = docsCounted;
+        this.setHitsCounted(hitsCounted);
+        this.setDocsRetrieved(docsRetrieved);
+        this.setDocsCounted(docsCounted);
         this.capturedGroups = capturedGroups;
     }
 

@@ -217,7 +217,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
      */
     protected DocResults(QueryInfo queryInfo, List<DocResult> results, SampleParameters sampleParameters, WindowStats windowStats) {
         this(queryInfo);
-        this.results = results;
+        this.setResults(results);
         this.sampleParameters = sampleParameters;
         this.windowStats = windowStats;
     }
@@ -227,9 +227,9 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
         this.query = query;
         // TODO: a better approach is to only read documents we're actually interested in instead of all of them; compare with Hits.
         //    even better: make DocResults abstract and provide two implementations, DocResultsFromHits and DocResultsFromQuery.
-        results = new ArrayList<>();
+        setResults(new ArrayList<>());
         try {
-            queryInfo.index().searcher().search(query, new SimpleDocCollector(results, queryInfo));
+            queryInfo.index().searcher().search(query, new SimpleDocCollector(getResults(), queryInfo));
         } catch (IOException e) {
             throw BlackLabRuntimeException.wrap(e);
         }
@@ -248,7 +248,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     @Override
     public DocResults sort(DocProperty sortProp) {
         ensureAllResultsRead();
-        List<DocResult> sorted = new ArrayList<DocResult>(this.results);
+        List<DocResult> sorted = new ArrayList<DocResult>(this.getResults());
         sorted.sort(sortProp);
         return DocResults.fromList(queryInfo(), sorted, (SampleParameters)null, (WindowStats)null);
     }
@@ -295,7 +295,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     @Override
     protected void ensureResultsRead(int index) {
         try {
-            if (doneProcessingAndCounting() || (index >= 0 && results.size() > index))
+            if (doneProcessingAndCounting() || (index >= 0 && getResults().size() > index))
                 return;
 
             while (!ensureResultsReadLock.tryLock()) {
@@ -305,7 +305,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                 * So instead poll our own state, then if we're still missing results after that just count them ourselves
                 */
                 Thread.sleep(50);
-                if (doneProcessingAndCounting() || (index >= 0 && results.size() >= index))
+                if (doneProcessingAndCounting() || (index >= 0 && getResults().size() >= index))
                     return;
             }
 
@@ -314,7 +314,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                 HitsArrays docHits = partialDocHits;
                 int lastDocId = partialDocId;
 
-                while (sourceHitsIterator.hasNext() && (index < 0 || index > results.size())) {
+                while (sourceHitsIterator.hasNext() && (index < 0 || index > getResults().size())) {
                     EphemeralHit h = sourceHitsIterator.next();
                     int curDoc = h.doc;
                     if (curDoc != lastDocId) {
@@ -362,7 +362,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
             docResult = DocResult.fromHits(doc, docHits.window(0, maxHitsToStorePerDoc), totalNumberOfHits);
         else
             docResult = DocResult.fromHits(doc, docHits, totalNumberOfHits);
-        results.add(docResult);
+        getResults().add(docResult);
         if (docHits.size() > mostHitsInDocument)
             mostHitsInDocument = docHits.size();
         totalHits += docHits.size();
@@ -440,7 +440,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     public int intSum(DocProperty numProp) {
         ensureAllResultsRead();
         int sum = 0;
-        for (DocResult result : results) {
+        for (DocResult result : getResults()) {
             sum += ((PropertyValueInt) numProp.get(result)).value();
         }
         return sum;
@@ -460,7 +460,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     @Override
     public Group<Hit> get(PropertyValue prop) {
         ensureAllResultsRead();
-        return results.stream().filter(d -> d.identity().equals(prop)).findFirst().orElse(null);
+        return getResults().stream().filter(d -> d.identity().equals(prop)).findFirst().orElse(null);
     }
 
     @Override
@@ -473,7 +473,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
         if (maximumNumberOfResultsPerGroup < 0)
             maximumNumberOfResultsPerGroup = Integer.MAX_VALUE;
         List<DocResult> truncatedGroups = new ArrayList<>();
-        for (DocResult group: results) {
+        for (DocResult group: getResults()) {
             DocResult newGroup = DocResult.fromHits(group.identity(), group.storedResults().window(0, maximumNumberOfResultsPerGroup), group.size());
             truncatedGroups.add(newGroup);
         }

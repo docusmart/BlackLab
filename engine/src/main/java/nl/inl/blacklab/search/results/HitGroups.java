@@ -80,14 +80,14 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
     private Map<PropertyValue, HitGroup> groups = new HashMap<>();
 
     /**
-     * Total number of results in the source set of hits. 
-     * Note that unlike other Hits instances (samples/sorts/windows), we should safely be able to copy these from our source, 
+     * Total number of results in the source set of hits.
+     * Note that unlike other Hits instances (samples/sorts/windows), we should safely be able to copy these from our source,
      * because hits are always fully read before constructing groups.
      */
     protected final ResultsStats hitsStats;
     /**
-     * Total number of results in the source set of hits. 
-     * Note that unlike other Hits instances (samples/sorts/windows), we should safely be able to copy these from our source, 
+     * Total number of results in the source set of hits.
+     * Note that unlike other Hits instances (samples/sorts/windows), we should safely be able to copy these from our source,
      * because hits are always fully read before constructing groups.
      */
     protected final ResultsStats docsStats;
@@ -153,7 +153,7 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
             Integer groupSize = groupSizes.get(groupId);
             HitGroup group = HitGroup.fromList(queryInfo(), groupId, hitList, hits.capturedGroups(), groupSize);
             groups.put(groupId, group);
-            results.add(group);
+            getResults().add(group);
         }
 
         // Make a copy so we don't keep any references to the source hits
@@ -170,7 +170,7 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
         for (HitGroup group: groups) {
             if (group.size() > largestGroupSize)
                 largestGroupSize = group.size();
-            results.add(group);
+            getResults().add(group);
             this.groups.put(group.identity(), group);
             resultObjects += group.numberOfStoredResults() + 1;
         }
@@ -194,12 +194,12 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
     @Override
     public HitGroups sort(GroupProperty<Hit, HitGroup> sortProp) {
         ensureAllResultsRead();
-        List<HitGroup> sorted = new ArrayList<HitGroup>(this.results);
+        List<HitGroup> sorted = new ArrayList<HitGroup>(this.getResults());
         sorted.sort(sortProp);
         // Sorted contains the same hits as us, so we can pass on our result statistics.
         return HitGroups.fromList(queryInfo(), sorted, criteria, (SampleParameters)null, (WindowStats)null, hitsStats, docsStats);
     }
-    
+
     /**
      * Take a sample of hits by wrapping an existing Hits object.
      *
@@ -270,7 +270,7 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
 
     @Override
     public HitGroups filter(GroupProperty<Hit, HitGroup> property, PropertyValue value) {
-        List<HitGroup> list = this.results.stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList()); 
+        List<HitGroup> list = this.getResults().stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList());
         Pair<ResultsStats, ResultsStats> stats = getStatsOfSample(list, this.hitsStats.maxStats(), this.docsStats.maxStats());
         return HitGroups.fromList(queryInfo(), list, groupCriteria(), (SampleParameters)null, (WindowStats)null, stats.getLeft(), stats.getRight());
     }
@@ -285,7 +285,7 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
         if (maximumNumberOfResultsPerGroup < 0)
             maximumNumberOfResultsPerGroup = Integer.MAX_VALUE;
         List<HitGroup> truncatedGroups = new ArrayList<>();
-        for (HitGroup group: results) {
+        for (HitGroup group: getResults()) {
             HitGroup newGroup = HitGroup.fromHits(group.identity(), group.storedResults().window(0, maximumNumberOfResultsPerGroup), group.size());
             truncatedGroups.add(newGroup);
         }
@@ -316,16 +316,16 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
         return resultObjects;
     }
 
-    /** 
+    /**
      * Get document stats for these groups.
-     * NOTE: docsCounted will return -1 if this HitGroups instance is a sample and hasn't got all hits stored 
+     * NOTE: docsCounted will return -1 if this HitGroups instance is a sample and hasn't got all hits stored
      * (it is impossible to count accurately in that case as one document may be in more than one group)
-     * @return stats 
+     * @return stats
      */
     public ResultsStats docsStats() {
         return docsStats;
     }
-    
+
     public ResultsStats hitsStats() {
         return hitsStats;
     }
@@ -333,7 +333,7 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
     /**
      * Compute total number of hits & documents in the sample
      * NOTE: docsStats might return -1 for totalDocsCounted if not all hits are stored/retrieved
-     *  
+     *
      * @param sample a sample of the full results set
      * @param maxHitsStatsOfSource copied from source of sample. Since if the source hit the limits, then it follows that the sample is also limited
      * @param maxDocsStatsOfSource copied from source of sample. Since if the source hit the limits, then it follows that the sample is also limited
@@ -343,17 +343,17 @@ public class HitGroups extends ResultsList<HitGroup, GroupProperty<Hit, HitGroup
         int hitsCounted = 0;
         int hitsRetrieved = 0;
         int docsRetrieved = 0;
-        
+
         IntHashSet docs = new IntHashSet();
         for (HitGroup h : sample) {
             hitsCounted += h.size();
             for (Hit hh : h.storedResults()) {
                 ++hitsRetrieved;
-                if (docs.add(hh.doc())) 
+                if (docs.add(hh.doc()))
                     ++docsRetrieved;
             }
         }
         boolean allHitsRetrieved = hitsRetrieved == hitsCounted;
-        return Pair.of(new ResultsStatsStatic(hitsRetrieved, hitsCounted, maxHitsStatsOfSource), new ResultsStatsStatic(docsRetrieved, allHitsRetrieved ? docsRetrieved : -1, maxDocsStatsOfSource));        
+        return Pair.of(new ResultsStatsStatic(hitsRetrieved, hitsCounted, maxHitsStatsOfSource), new ResultsStatsStatic(docsRetrieved, allHitsRetrieved ? docsRetrieved : -1, maxDocsStatsOfSource));
     }
 }

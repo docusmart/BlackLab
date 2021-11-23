@@ -123,7 +123,7 @@ public class Kwics {
         }
         // last part
         Contexts.makeKwicsSingleDocForwardIndex(
-            hits.window(firstIndexWithCurrentDocId, hits.size() - firstIndexWithCurrentDocId), 
+            hits.window(firstIndexWithCurrentDocId, hits.size() - firstIndexWithCurrentDocId),
             wordForwardIndex, punctForwardIndex, attrForwardIndices, fiidLookups, contextSize, conc1);
         
         return conc1;

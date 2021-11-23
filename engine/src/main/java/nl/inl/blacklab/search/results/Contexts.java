@@ -70,7 +70,7 @@ public class Contexts implements Iterable<int[]> {
         // Get punctuation context
         int[][] punctContext = null;
         if (punctForwardIndex != null) {
-            punctContext = getContextWordsSingleDocument(hits.hitsArrays, 0, hits.size(), wordsAroundHit, Arrays.asList(punctForwardIndex), Arrays.asList(fiidLookups.get(punctForwardIndex.annotation())));
+            punctContext = getContextWordsSingleDocument(hits.getHitsArrays(), 0, hits.size(), wordsAroundHit, Arrays.asList(punctForwardIndex), Arrays.asList(fiidLookups.get(punctForwardIndex.annotation())));
         }
         Terms punctTerms = punctForwardIndex == null ? null : punctForwardIndex.terms();
 
@@ -89,13 +89,13 @@ public class Contexts implements Iterable<int[]> {
                 attrName[i] = e.getKey();
                 attrFI[i] = e.getValue();
                 attrTerms[i] = attrFI[i].terms();
-                attrContext[i] = getContextWordsSingleDocument(hits.hitsArrays, 0, hits.size(), wordsAroundHit, Arrays.asList(attrFI[i]), Arrays.asList(fiidLookups.get(attrName[i])));
+                attrContext[i] = getContextWordsSingleDocument(hits.getHitsArrays(), 0, hits.size(), wordsAroundHit, Arrays.asList(attrFI[i]), Arrays.asList(fiidLookups.get(attrName[i])));
                 i++;
             }
         }
 
         // Get word context
-        int[][] wordContext = getContextWordsSingleDocument(hits.hitsArrays, 0, hits.size(), wordsAroundHit, Arrays.asList(forwardIndex), Arrays.asList(fiidLookups.get(forwardIndex.annotation())));
+        int[][] wordContext = getContextWordsSingleDocument(hits.getHitsArrays(), 0, hits.size(), wordsAroundHit, Arrays.asList(forwardIndex), Arrays.asList(fiidLookups.get(forwardIndex.annotation())));
         Terms terms = forwardIndex.terms();
 
         // Make the concordances from the context
@@ -298,7 +298,7 @@ public class Contexts implements Iterable<int[]> {
         // Group hits per document
 
         // setup first iteration
-        HitsArrays ha = hits.hitsArrays;
+        HitsArrays ha = hits.getHitsArrays();
         final int size = ha.size(); // TODO ugly, might be slow because of required locking
         int prevDoc = size == 0 ? -1 : ha.doc(0);
         int firstHitInCurrentDoc = 0;

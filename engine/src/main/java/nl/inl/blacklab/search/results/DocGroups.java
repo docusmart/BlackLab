@@ -68,7 +68,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
                 largestGroupSize = group.size();
             totalResults += group.size();
             resultObjects += group.numberOfStoredHits() + 1;
-            results.add(group);
+            getResults().add(group);
             this.groups.put(group.identity(), group);
         }
     }
@@ -91,7 +91,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
     @Override
     public DocGroups sort(GroupProperty<DocResult, DocGroup> sortProp) {
         ensureAllResultsRead();
-        List<DocGroup> sorted = new ArrayList<DocGroup>(this.results);
+        List<DocGroup> sorted = new ArrayList<DocGroup>(this.getResults());
         sorted.sort(sortProp);
         return new DocGroups(
             this.queryInfo(), 
@@ -111,7 +111,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
     public DocGroups filter(GroupProperty<DocResult, DocGroup> property, PropertyValue value) {
         return new DocGroups(
             this.queryInfo(), 
-            this.results.stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList()), 
+            this.getResults().stream().filter(group -> property.get(group).equals(value)).collect(Collectors.toList()),
             this.groupBy, 
             (SampleParameters)null, 
             (WindowStats)null
@@ -151,7 +151,7 @@ public class DocGroups extends ResultsList<DocGroup, GroupProperty<DocResult, Do
         if (maximumNumberOfResultsPerGroup < 0)
             maximumNumberOfResultsPerGroup = Integer.MAX_VALUE;
         List<DocGroup> truncatedGroups = new ArrayList<>();
-        for (DocGroup group: results) {
+        for (DocGroup group: getResults()) {
             List<DocResult> truncatedList = group.storedResults().window(0, maximumNumberOfResultsPerGroup).resultsList();
             DocGroup newGroup = DocGroup.fromList(queryInfo(), group.identity(), truncatedList, group.size(), group.totalTokens());
             truncatedGroups.add(newGroup);

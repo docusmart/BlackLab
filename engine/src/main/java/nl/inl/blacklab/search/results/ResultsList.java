@@ -13,11 +13,11 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
     /**
      * The results.
      */
-    protected List<T> results;
+    private List<T> results;
     
     public ResultsList(QueryInfo queryInfo) {
         super(queryInfo);
-        results = new ArrayList<>();
+        setResults(new ArrayList<>());
     }
     
     /**
@@ -39,7 +39,7 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
             public boolean hasNext() {
                 // Do we still have hits in the hits list?
                 ensureResultsRead(index + 2);
-                return results.size() >= index + 2;
+                return getResults().size() >= index + 2;
             }
         
             @Override
@@ -47,7 +47,7 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
                 // Check if there is a next, taking unread hits from Spans into account
                 if (hasNext()) {
                     index++;
-                    return results.get(index);
+                    return getResults().get(index);
                 }
                 throw new NoSuchElementException();
             }
@@ -62,26 +62,26 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
     @Override
     public synchronized T get(int i) {
         ensureResultsRead(i + 1);
-        if (i >= results.size())
+        if (i >= getResults().size())
             return null;
-        return results.get(i);
+        return getResults().get(i);
     }
     
     @Override
     protected boolean resultsProcessedAtLeast(int lowerBound) {
         ensureResultsRead(lowerBound);
-        return results.size() >= lowerBound;
+        return getResults().size() >= lowerBound;
     }
     
     @Override
     protected int resultsProcessedTotal() {
         ensureAllResultsRead();
-        return results.size();
+        return getResults().size();
     }
     
     @Override
     protected int resultsProcessedSoFar() {
-        return results.size();
+        return getResults().size();
     }
     
     
@@ -99,9 +99,9 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
      */
     protected List<T> resultsSubList(int fromIndex, int toIndex) {
         ensureResultsRead(toIndex);
-        if (toIndex > results.size())
-            toIndex = results.size();
-        return results.subList(fromIndex, toIndex);
+        if (toIndex > getResults().size())
+            toIndex = getResults().size();
+        return getResults().subList(fromIndex, toIndex);
     }
     
     /**
@@ -114,6 +114,14 @@ public abstract class ResultsList<T, P extends ResultProperty<T>> extends Result
      */
     protected List<T> resultsList() {
         ensureAllResultsRead();
-        return Collections.unmodifiableList(results);
+        return Collections.unmodifiableList(getResults());
+    }
+
+    public List<T> getResults() {
+        return results;
+    }
+
+    public void setResults(List<T> results) {
+        this.results = results;
     }
 }

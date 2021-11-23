@@ -273,7 +273,7 @@ public class HitsFromQueryParallel extends Hits {
                     if (storeThisHit) {
                         int start = spans.startPosition();
                         int end = spans.endPosition();
-                        results.add(doc, start, end);
+                        results.add(doc, start, end, results.size());
                         if (capturedGroups != null) {
                             Span[] groups = new Span[numCaptureGroups];
                             hitQueryContext.getCapturedGroups(groups);
@@ -325,6 +325,7 @@ public class HitsFromQueryParallel extends Hits {
                 hits.docs().clear();
                 hits.starts().clear();
                 hits.ends().clear();
+                hits.indices().clear();
             });
         }
 
@@ -411,7 +412,7 @@ public class HitsFromQueryParallel extends Hits {
                     weight,
                     leafReaderContext,
                     this.hitQueryContext,
-                    this.hitsArrays,
+                    this.getHitsArrays(),
                     this.capturedGroups,
                     this.globalDocsProcessed,
                     this.globalDocsCounted,
@@ -455,7 +456,7 @@ public class HitsFromQueryParallel extends Hits {
     protected void ensureResultsRead(int number) {
         final int clampedNumber = number = number < 0 ? maxHitsToCount : Math.min(number, maxHitsToCount);
 
-        if (allSourceSpansFullyRead || (hitsArrays.size() >= clampedNumber)) {
+        if (allSourceSpansFullyRead || (getHitsArrays().size() >= clampedNumber)) {
             return;
         }
 
@@ -471,7 +472,7 @@ public class HitsFromQueryParallel extends Hits {
              * So instead poll our own state, then if we're still missing results after that just count them ourselves
              */
             while (!ensureHitsReadLock.tryLock()) {
-                if (allSourceSpansFullyRead || (hitsArrays.size() >= clampedNumber)) {
+                if (allSourceSpansFullyRead || (getHitsArrays().size() >= clampedNumber)) {
                     return;
                 }
 

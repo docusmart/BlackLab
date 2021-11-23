@@ -4,22 +4,27 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import nl.inl.blacklab.instrumentation.RequestInstrumentationProvider;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.lucene.document.Document;
 
 import nl.inl.blacklab.exceptions.BlackLabException;
@@ -76,6 +81,8 @@ public abstract class RequestHandler {
 
     public static final int HTTP_OK = HttpServletResponse.SC_OK;
 
+    protected RequestInstrumentationProvider instrumentationProvider;
+
     /** The available request handlers by name */
     static Map<String, Class<? extends RequestHandler>> availableHandlers;
 
@@ -115,9 +122,11 @@ public abstract class RequestHandler {
      * @return the response data
      */
     public static RequestHandler create(BlackLabServer servlet, HttpServletRequest request, boolean debugMode,
-            DataFormat outputType) {
+            DataFormat outputType, RequestInstrumentationProvider instrumentationProvider) {
 
         // See if a user is logged in
+        String requestId = instrumentationProvider.getRequestID(request).orElse("");
+        ThreadContext.put("requestId", requestId);
         SearchManager searchManager = servlet.getSearchManager();
         User user = searchManager.getAuthSystem().determineCurrentUser(servlet, request);
         String debugHttpHeaderToken = searchManager.config().getAuthentication().getDebugHttpHeaderAuthToken();
@@ -179,12 +188,17 @@ public abstract class RequestHandler {
                 requestHandler = new RequestHandlerDeleteFormat(servlet, request, user, indexName, urlResource,
                         urlPathInfo);
             } else {
-                if (indexName.length() == 0 || resourceOrPathGiven) {
+                if (indexName.length() == 0 || (resourceOrPathGiven && !"docs".equals(urlResource))) {
                     return errorObj.methodNotAllowed("DELETE", null);
                 }
-                if (privateIndex == null || !privateIndex.userMayDelete(user))
-                    return errorObj.forbidden("You can only delete your own private indices.");
-                requestHandler = new RequestHandlerDeleteIndex(servlet, request, user, indexName, null, null);
+
+                if ("docs".equals(urlResource)) {
+                    requestHandler = new RequestHandlerDeleteDocs(servlet, request, user, indexName, urlResource, urlPathInfo);
+                } else {
+                    if (privateIndex == null || !privateIndex.userMayDelete(user))
+                        return errorObj.forbidden("You can only delete your own private indices.");
+                    requestHandler = new RequestHandlerDeleteIndex(servlet, request, user, indexName, null, null);
+                }
             }
         } else if (method.equals("PUT")) {
             return errorObj.methodNotAllowed("PUT", "Create new index with POST to /blacklab-server");
@@ -354,6 +368,9 @@ public abstract class RequestHandler {
         if (debugMode)
             requestHandler.setDebug(debugMode);
 
+        requestHandler.setInstrumentationProvider(instrumentationProvider);
+        requestHandler.setRequestId(requestId);
+
         return requestHandler;
     }
 
@@ -419,6 +436,10 @@ public abstract class RequestHandler {
 
     protected IndexManager indexMan;
 
+    private RequestInstrumentationProvider requestInstrumentation;
+
+    private String requestId;
+
     RequestHandler(BlackLabServer servlet, HttpServletRequest request, User user, String indexName, String urlResource,
             String urlPathInfo) {
         this.servlet = servlet;
@@ -439,6 +460,18 @@ public abstract class RequestHandler {
         this.urlPathInfo = urlPathInfo;
         this.user = user;
 
+    }
+
+    protected void setRequestId(String requestId) {
+        this.requestId = requestId;
+    }
+
+    public RequestInstrumentationProvider getInstrumentationProvider() {
+        return instrumentationProvider;
+    }
+
+    public void setInstrumentationProvider(RequestInstrumentationProvider instrumentationProvider) {
+        this.instrumentationProvider = instrumentationProvider;
     }
 
     public void cleanup() {

@@ -47,7 +47,7 @@ public class BlsCache implements SearchCache {
     private static final long ONE_GB_BYTES = ONE_MB_BYTES * 1_000;
 
     /** Very rough measure of how large result objects are, based on a Hit (3 ints + 12 bytes object overhead) */
-    public static final int SIZE_OF_HIT = 24;
+    public static final int SIZE_OF_HIT = 28;
 
     /**
      * A thread that regularly calls cleanUpSearches() to
@@ -158,7 +158,7 @@ public class BlsCache implements SearchCache {
      * @param index the index
      */
     @Override
-    public void removeSearchesForIndex(BlackLabIndex index) {
+    public synchronized void removeSearchesForIndex(BlackLabIndex index) {
         // Iterate over the entries and remove the ones in the specified index
         traceInfo("Remove searches for index: " + index.name());
         Iterator<Entry<Search<?>, BlsCacheEntry<? extends SearchResult>>> it = searches.entrySet().iterator();
@@ -454,25 +454,26 @@ public class BlsCache implements SearchCache {
 
         //------------------
         // STEP 2: abort any long-running counts that no client has asked about for a while.
-        for (int i = 0; i < searches.size(); i++) {
-            BlsCacheEntry<?> search = searches.get(i);
-            if (search.isRunning()) {
-                // Running search. Run or abort?
-                boolean isCount = search.search() instanceof SearchCount;
-                if (isCount && search.timeSinceLastAccessMs() > abandonedCountAbortTimeSec * 1000L) {
-                    // Abandoned counts are removed right away, because we do this quite quickly (e.g. 30s)
-                    // and don't want to penalize users if they decide to come back to this search.
-                    remove(search.search());
-                    traceInfo("-- ABORT (abandoned count): {}", search);
-                    String maxTime = BlsUtils.describeIntervalSec(abandonedCountAbortTimeSec);
-                    search.setReason("Running count aborted because no client asked for it for " + maxTime + ". " +
-                            "This is done to ease server load. If you need the results of this count, please try your search again.");
-                    search.cancel(true);
-                    searches.remove(i);
-                    i--; // don't skip an element
-                }
-            }
-        }
+        // TODO(eginez) LEXION CHANGE: we've commented out step 2, as it causes deadlocks under heavy load.
+ //       for (int i = 0; i < searches.size(); i++) {
+ //           BlsCacheEntry<?> search = searches.get(i);
+ //           if (search.isRunning()) {
+ //               // Running search. Run or abort?
+ //               boolean isCount = search.search() instanceof SearchCount;
+ //               if (isCount && search.timeSinceLastAccessMs() > abandonedCountAbortTimeSec * 1000L) {
+ //                   // Abandoned counts are removed right away, because we do this quite quickly (e.g. 30s)
+ //                   // and don't want to penalize users if they decide to come back to this search.
+ //                   remove(search.search());
+ //                   traceInfo("-- ABORT (abandoned count): {}", search);
+ //                   String maxTime = BlsUtils.describeIntervalSec(abandonedCountAbortTimeSec);
+ //                   search.setReason("Running count aborted because no client asked for it for " + maxTime + ". " +
+ //                           "This is done to ease server load. If you need the results of this count, please try your search again.");
+ //                   search.cancel(true);
+ //                   searches.remove(i);
+ //                   i--; // don't skip an element
+ //               }
+ //           }
+ //       }
 
         // See if we can start a queued search
         startSearchIfPossible(true);

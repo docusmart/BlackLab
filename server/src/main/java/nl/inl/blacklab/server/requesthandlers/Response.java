@@ -2,6 +2,7 @@ package nl.inl.blacklab.server.requesthandlers;
 
 import javax.servlet.http.HttpServletResponse;
 
+import nl.inl.blacklab.server.exceptions.BlsException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -62,8 +63,12 @@ public class Response {
     // Highest internal error code so far: 32
 
     public static int internalError(DataStream ds, Exception e, boolean debugMode, String code) {
-        logger.debug("INTERNAL ERROR " + code + ":");
-        e.printStackTrace();
+        if (e.getCause() instanceof BlsException) {
+            BlsException cause = (BlsException) e.getCause();
+            logger.warn("BLACKLAB EXCEPTION " + cause.getBlsErrorCode(), e);
+            return Response.error(ds, cause.getBlsErrorCode(), cause.getMessage(), cause.getHttpStatusCode());
+        }
+        logger.error("INTERNAL ERROR " + code + ":", e);
         ds.internalError(e, debugMode, code);
         return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
     }
