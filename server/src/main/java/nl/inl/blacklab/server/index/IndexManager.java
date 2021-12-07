@@ -558,6 +558,7 @@ public class IndexManager {
         List<String> removedIds = new ArrayList<>();
         for (Index i : indices.values()) {
             if (!i.getDir().canRead()) {
+                logger.info("Deleting index {}", i.getDir().getName());
                 removedIds.add(i.getId());
             }
         }
