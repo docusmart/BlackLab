@@ -555,16 +555,17 @@ public class IndexManager {
      * deleted on-disk while we're running. This feature is explicitly supported.
      */
     private synchronized void cleanupRemovedIndices() {
-        List<String> removedIds = new ArrayList<>();
-        for (Index i : indices.values()) {
-            if (!i.getDir().canRead()) {
-                logger.info("Deleting index {}", i.getDir().getName());
-                removedIds.add(i.getId());
-            }
-        }
-        for (String id : removedIds) {
-            indices.remove(id).close();
-        }
+        return;
+    //    List<String> removedIds = new ArrayList<>();
+    //    for (Index i : indices.values()) {
+    //        if (!i.getDir().canRead()) {
+    //            logger.info("Deleting index {}", i.getDir().getName());
+    //            removedIds.add(i.getId());
+    //        }
+    //    }
+    //    for (String id : removedIds) {
+    //        indices.remove(id).close();
+    //    }
     }
 
     private static void markForDeletion(File directory) {
