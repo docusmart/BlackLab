@@ -566,19 +566,9 @@ public class IndexManager {
      * Checks all indices to see if their directories are still readable, and
      * removes them if this is not the case. This can happen when the index is
      * deleted on-disk while we're running. This feature is explicitly supported.
+     * @deprecated this is done via {@link IndexManager#startRemovedIndicesMonitor}
      */
     private void cleanupRemovedIndices() {
-        return;
-//        List<String> removedIds = new ArrayList<>();
-//        for (Index i : indices.values()) {
-//            if (!i.getDir().canRead()) {
-//                logger.info("Deleting index {}", i.getDir().getName());
-//                removedIds.add(i.getId());
-//            }
-//        }
-//        for (String id : removedIds) {
-//            indices.remove(id).close();
-//        }
     }
 
     public FileAlterationMonitor startRemovedIndicesMonitor(List<File> directories, long pollingIntervalInMs) throws Exception {
