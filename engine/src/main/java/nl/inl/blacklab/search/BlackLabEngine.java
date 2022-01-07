@@ -53,6 +53,7 @@ public final class BlackLabEngine implements Closeable {
         initializationExecutorService = Executors.newSingleThreadExecutor();
         // Follows the same initialization as Executors.newWorkStealingPool
         // and, it formats the thread names.
+/*
         this.searchExecutorService = new ForkJoinPool(searchThreads,
             (ForkJoinPool pool) -> {
                 ForkJoinWorkerThread worker = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
@@ -60,6 +61,16 @@ public final class BlackLabEngine implements Closeable {
                 worker.setName("SearchThread-" + threadNumber);
                 return worker;
             }, null, true);
+*/
+        this.searchExecutorService = Executors.newCachedThreadPool(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable runnable) {
+                Thread worker = Executors.defaultThreadFactory().newThread(runnable);
+                int threadNumber = threadCounter.getAndUpdate(i -> (i + 1) % 10000);
+                worker.setName("SearchThread-" + threadNumber);
+                return worker;
+            }
+        });
         this.maxThreadsPerSearch = maxThreadsPerSearch;
     }
 
