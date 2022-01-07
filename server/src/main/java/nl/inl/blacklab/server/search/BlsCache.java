@@ -343,9 +343,11 @@ public class BlsCache implements SearchCache {
 
             // Sort the searches based on descending "worthiness"
             List<BlsCacheEntry<?>> searches = new ArrayList<>(this.searches.values());
-            for (BlsCacheEntry<?> s : searches)
-                s.calculateWorthiness(); // calculate once before sorting so we don't run into Comparable contract issues because of threading
-            searches.sort(worthinessComparator);
+
+            //TODO (eginez) it is very expensive to calculate these values for all searches.
+            //for (BlsCacheEntry<?> s : searches)
+            //    s.calculateWorthiness(); // calculate once before sorting so we don't run into Comparable contract issues because of threading
+            //searches.sort(worthinessComparator);
 
             // Find & start oldest queued search
             BlsCacheEntry<?> search1 = searches.stream().filter(s -> !s.wasStarted()).findFirst().orElse(null);
@@ -385,9 +387,10 @@ public class BlsCache implements SearchCache {
         logCacheState();
 
         // Sort the searches based on descending "worthiness"
-        for (BlsCacheEntry<?> s : searches)
-            s.calculateWorthiness(); // calculate once before sorting so we don't run into Comparable contract issues because of threading
-        searches.sort(worthinessComparator);
+        //TODO (eginez) it is very expensive to calculate these values for all searches.
+        //for (BlsCacheEntry<?> s : searches)
+        //    s.calculateWorthiness(); // calculate once before sorting so we don't run into Comparable contract issues because of threading
+        //searches.sort(worthinessComparator);
 
         //------------------
         // STEP 1: remove least worthy, finished searches from cache
