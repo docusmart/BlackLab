@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
@@ -106,8 +109,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             }
         }
 
-        private ReadWriteLock lock = new ReentrantReadWriteLock();
-
+        private ReadWriteLock lock = new ReadWriteNoopLock();
         private final IntArrayList docs;
         private final IntArrayList starts;
         private final IntArrayList ends;
