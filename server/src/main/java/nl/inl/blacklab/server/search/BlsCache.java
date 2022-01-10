@@ -55,7 +55,7 @@ public class BlsCache implements SearchCache {
      */
     class CleanupSearchesThread extends Thread implements UncaughtExceptionHandler {
 
-        private static final int CLEAN_UP_CACHE_INTERVAL_MS = 500;
+        private static final int CLEAN_UP_CACHE_INTERVAL_MS = 5000;
 
         /** Construct the load manager thread object. */
         public CleanupSearchesThread() {
