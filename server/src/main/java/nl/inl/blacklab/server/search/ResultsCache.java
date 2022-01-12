@@ -8,6 +8,8 @@ import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ResultsCache implements SearchCache {
+    private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private final ExecutorService threadPool;
     protected Map<Search<?>, Future<? extends SearchResult>> runningSearches = new ConcurrentHashMap<>();
     private final Cache<Search<?>, SearchResult> searches = CacheBuilder.newBuilder()
@@ -71,7 +74,7 @@ public class ResultsCache implements SearchCache {
         this.threadPool = threadPool;
     }
     @Override
-    public <T extends SearchResult> SearchCacheEntry<T> getAsync(Search<T> search, boolean allowQueue) {
+    public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, boolean allowQueue) {
         //simple case the result is in the cache
         SearchResult result = searches.getIfPresent(search);
         if (result != null) {
@@ -79,11 +82,19 @@ public class ResultsCache implements SearchCache {
         }
         if (runningSearches.containsKey(search)) {
             Future<? extends SearchResult> future = runningSearches.get(search);
-            return new SearchCacheEntryFromFuture<>((Future<T>) future);
+            if (future != null) {
+                return new SearchCacheEntryFromFuture<>((Future<T>) future);
+            } else {
+                logger.warn("future was null. Maybe value is in the cache?");
+                return new ResultsCache.CacheEntryWithResults<>((T)searches.getIfPresent(search));
+            }
         }
 
         Future<T> searchExecution = threadPool.submit(() -> {
             T results = search.executeInternal();
+            if (results == null) {
+                logger.warn("resutls for: {} were null", search.toString());
+            }
             this.searches.put(search, (T) results);
             this.runningSearches.remove(search);
             return results;
