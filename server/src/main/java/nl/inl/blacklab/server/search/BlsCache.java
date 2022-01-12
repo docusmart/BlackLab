@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -95,7 +96,7 @@ public class BlsCache implements SearchCache {
     /** Abort an abandoned count after how much time? (s) */
     private int abandonedCountAbortTimeSec;
 
-    protected Map<Search<?>, BlsCacheEntry<? extends SearchResult>> searches = new HashMap<>();
+    protected Map<Search<?>, BlsCacheEntry<? extends SearchResult>> searches = new ConcurrentHashMap<>();
 
     protected boolean trace = false;
 
@@ -158,7 +159,7 @@ public class BlsCache implements SearchCache {
      * @param index the index
      */
     @Override
-    public synchronized void removeSearchesForIndex(BlackLabIndex index) {
+    public void removeSearchesForIndex(BlackLabIndex index) {
         // Iterate over the entries and remove the ones in the specified index
         traceInfo("Remove searches for index: " + index.name());
         Iterator<Entry<Search<?>, BlsCacheEntry<? extends SearchResult>>> it = searches.entrySet().iterator();
@@ -177,7 +178,7 @@ public class BlsCache implements SearchCache {
      * @param cancelRunning if true, cancels all running searches as well.
      */
     @Override
-    public synchronized void clear(boolean cancelRunning) {
+    public void clear(boolean cancelRunning) {
         for (BlsCacheEntry<? extends SearchResult> cachedSearch : searches.values()) {
             cachedSearch.cancel(true);
         }
@@ -191,7 +192,7 @@ public class BlsCache implements SearchCache {
     }
 
     @SuppressWarnings("unchecked")
-    private synchronized <R extends SearchResult> BlsCacheEntry<R> getFromCache(Search<R> search, boolean block, boolean allowQueue) {
+    private <R extends SearchResult> BlsCacheEntry<R> getFromCache(Search<R> search, boolean block, boolean allowQueue) {
         //if (trace) logger.debug("getFromCache({}, block={}, allowQueue={})", search, block, allowQueue);
         BlsCacheEntry<R> future;
         boolean useCache = search.queryInfo().useCache() && !cacheDisabled;
@@ -245,7 +246,7 @@ public class BlsCache implements SearchCache {
         return future;
     }
 
-    synchronized String getCacheStats() {
+    String getCacheStats() {
         if (trace) {
             Map<String, Integer> counts = getCountsPerStatus();
             return String.format("%d queued, %d running, %d finished, %d cancelled",
@@ -291,7 +292,7 @@ public class BlsCache implements SearchCache {
 
     @Override
     @SuppressWarnings("unchecked")
-    synchronized public <R extends SearchResult> BlsCacheEntry<R> remove(Search<R> search) {
+    public <R extends SearchResult> BlsCacheEntry<R> remove(Search<R> search) {
         BlsCacheEntry<R> future = (BlsCacheEntry<R>) searches.remove(search);
         if (future != null)
             traceInfo("-- REMOVED:  {} ({} searches left)", search, searches.size());
@@ -307,7 +308,7 @@ public class BlsCache implements SearchCache {
      *
      * @return estimate of number of Hits in cache
      */
-    private synchronized long estimateResultObjectsInCache() {
+    private long estimateResultObjectsInCache() {
         // Estimate the total cache size
         long resultsObjectsInCache = 0;
         for (BlsCacheEntry<?> search : searches.values()) {
@@ -322,11 +323,11 @@ public class BlsCache implements SearchCache {
         }
     }
 
-    public synchronized int numberOfRunningSearches() {
+    public int numberOfRunningSearches() {
         return (int) searches.values().stream().filter(s -> s.isRunning()).count();
     }
 
-    private synchronized int numberOfQueuedSearches() {
+    private int numberOfQueuedSearches() {
         return (int) searches.values().stream().filter(s -> !s.wasStarted()).count();
     }
 
@@ -335,7 +336,7 @@ public class BlsCache implements SearchCache {
      *
      * @param report if true (and trace is on), report the search we started
      */
-    synchronized void startSearchIfPossible(boolean report) {
+    void startSearchIfPossible(boolean report) {
         // Is server load low enough to start a search?
         if (canStartAnotherSearch()) {
             // Find the oldest queued search and start it.
@@ -376,7 +377,7 @@ public class BlsCache implements SearchCache {
      * Abort searches if too much memory is in use or the search is taking too long.
      * Remove older finished searches from cache. Start a queued search if load is low enough.
      */
-    synchronized void updateCache() {
+    void updateCache() {
         long resultsObjectsInCache = estimateResultObjectsInCache();
         cacheSizeBytes = resultsObjectsInCache * SIZE_OF_HIT;
 
@@ -491,7 +492,7 @@ public class BlsCache implements SearchCache {
      * @param cacheSizeBytes
      * @param searches
      */
-    private synchronized void logCacheState() {
+    private void logCacheState() {
         // Log cache state
         if (logDatabase != null && System.currentTimeMillis() - lastCacheLogMs > LOG_CACHE_STATE_INTERVAL_SEC * 1000) {
             int numberRunning = 0;
@@ -520,7 +521,7 @@ public class BlsCache implements SearchCache {
      * Dump information about the cache status.
      * @param ds where to write information to
      */
-    public synchronized void dataStreamCacheStatus(DataStream ds) {
+    public void dataStreamCacheStatus(DataStream ds) {
         Map<String, Integer> counts = getCountsPerStatus();
         ds.startMap();
             ds.entry("targetFreeMemMegs", config.getTargetFreeMemMegs())
@@ -546,7 +547,7 @@ public class BlsCache implements SearchCache {
      * @param ds where to write information to
      * @param debugInfo include debug info?
      */
-    public synchronized void dataStreamContents(DataStream ds, boolean debugInfo) {
+    public void dataStreamContents(DataStream ds, boolean debugInfo) {
         ds.startList();
         for (BlsCacheEntry<? extends SearchResult> e: searches.values()) {
             ds.startItem("job");
