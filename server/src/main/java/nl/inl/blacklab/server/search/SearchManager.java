@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import nl.inl.blacklab.search.BlackLab;
 import nl.inl.blacklab.search.BlackLabEngine;
+import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.server.config.BLSConfig;
 import nl.inl.blacklab.server.exceptions.ConfigurationException;
 import nl.inl.blacklab.server.index.IndexManager;
@@ -23,7 +24,7 @@ public class SearchManager {
     private BLSConfig config;
 
     /** All running searches as well as recently run searches */
-    private BlsCache cache;
+    private SearchCache cache;
 
     /** System for determining the current user. */
     private AuthManager authSystem;
@@ -64,7 +65,8 @@ public class SearchManager {
         int abandonedCountAbortTimeSec = config.getPerformance().getAbandonedCountAbortTimeSec();
         int maxConcurrentSearches = config.getPerformance().getMaxConcurrentSearches();
         boolean traceCache = config.getLog().getTrace().isCache();
-        cache = new BlsCache(config.getCache(), maxConcurrentSearches, abandonedCountAbortTimeSec, traceCache, logDatabase);
+        //cache = new BlsCache(config.getCache(), maxConcurrentSearches, abandonedCountAbortTimeSec, traceCache, logDatabase);
+        cache = new ResultsCache(blackLab.searchExecutorService());
 
         // Find the indices
         indexMan = new IndexManager(this, config);
@@ -107,7 +109,7 @@ public class SearchManager {
         return logDatabase;
     }
 
-    public BlsCache getBlackLabCache() {
+    public SearchCache getBlackLabCache() {
         return cache;
     }
 
