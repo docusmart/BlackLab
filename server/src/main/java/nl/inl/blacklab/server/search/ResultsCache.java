@@ -11,20 +11,16 @@ import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private final ExecutorService threadPool;
-    protected Map<Search<?>, Future<? extends SearchResult>> runningSearches = new ConcurrentHashMap<>();
+    protected final Map<Search<?>, Future<? extends SearchResult>> runningSearches = new ConcurrentHashMap<>();
     private final Cache<Search<?>, SearchResult> searches = CacheBuilder.newBuilder()
-            .maximumSize(1000)
-            .expireAfterWrite(10, TimeUnit.MINUTES)
+            .maximumSize(10000)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
             .build();
 
 
@@ -74,7 +70,7 @@ public class ResultsCache implements SearchCache {
         this.threadPool = threadPool;
     }
     @Override
-    public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, boolean allowQueue) {
+    public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
         //simple case the result is in the cache
         SearchResult result = searches.getIfPresent(search);
         if (result != null) {
@@ -92,9 +88,6 @@ public class ResultsCache implements SearchCache {
 
         Future<T> searchExecution = threadPool.submit(() -> {
             T results = search.executeInternal();
-            if (results == null) {
-                logger.warn("resutls for: {} were null", search.toString());
-            }
             this.searches.put(search, (T) results);
             this.runningSearches.remove(search);
             return results;
