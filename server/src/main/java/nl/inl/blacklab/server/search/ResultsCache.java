@@ -1,15 +1,17 @@
 package nl.inl.blacklab.server.search;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
 import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
-import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
+import nl.inl.blacklab.server.config.BLSConfigCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Map;
 import java.util.concurrent.*;
@@ -17,11 +19,7 @@ import java.util.concurrent.*;
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private final ExecutorService threadPool;
-    protected final Map<Search<?>, Future<? extends SearchResult>> runningSearches = new ConcurrentHashMap<>();
-    private final Cache<Search<?>, SearchResult> searches = CacheBuilder.newBuilder()
-            .maximumSize(10000)
-            .expireAfterWrite(5, TimeUnit.MINUTES)
-            .build();
+    private final LoadingCache<Search<? extends SearchResult>, SearchResult> searchCache;
 
 
     public static class CacheEntryWithResults<T extends SearchResult> extends SearchCacheEntry<T> {
@@ -66,13 +64,30 @@ public class ResultsCache implements SearchCache {
         }
     }
 
-    public ResultsCache(ExecutorService threadPool) {
+    public ResultsCache(BLSConfigCache config, ExecutorService threadPool)  {
         this.threadPool = threadPool;
+
+        CacheLoader<Search<? extends SearchResult>, SearchResult> cacheLoader = new CacheLoader<Search<? extends SearchResult>, SearchResult>() {
+            @Override
+            public @Nullable SearchResult load(Search<?> search) throws Exception {
+                Future<SearchResult> job = threadPool.submit(() ->  {
+                    logger.info("Executing search: {}", search.toString());
+                    return search.executeInternal();
+                });
+                return job.get();
+            }
+        };
+
+        searchCache = Caffeine.newBuilder()
+            .maximumSize(1_000)
+            .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
+            .recordStats()
+            .build(cacheLoader);
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
         //simple case the result is in the cache
-        SearchResult result = searches.getIfPresent(search);
+        /*SearchResult result = searches.getIfPresent(search);
         if (result != null) {
             return new ResultsCache.CacheEntryWithResults<>((T) result);
         }
@@ -94,30 +109,29 @@ public class ResultsCache implements SearchCache {
         });
         runningSearches.put(search, searchExecution);
         return new SearchCacheEntryFromFuture<>(searchExecution);
+         */
+        SearchResult searchResult = searchCache.get(search);
+        return new CacheEntryWithResults(searchResult);
     }
 
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> remove(Search<T> search) {
-        SearchResult removed = searches.asMap().remove(search);
-        if (removed != null) {
-            return new CacheEntryWithResults<>((T)removed);
+        if (searchCache.asMap().containsKey(search)) {
+            SearchResult searchResult = searchCache.get(search);
+            searchCache.invalidate(search);
+            return new CacheEntryWithResults(searchResult);
         }
         return null;
     }
 
     @Override
     public void removeSearchesForIndex(BlackLabIndex index) {
-        searches.asMap().keySet().removeIf(s -> s.queryInfo().index() == index);
+        searchCache.asMap().keySet().removeIf(s -> s.queryInfo().index() == index);
     }
 
     @Override
     public void clear(boolean cancelRunning) {
-        searches.asMap().clear();
-        if (cancelRunning) {
-            runningSearches.values().stream().filter(f -> !f.isDone()).forEach(f -> f.cancel(true));
-            runningSearches.clear();
-        }
-
+        searchCache.invalidateAll();
     }
 
     @Override

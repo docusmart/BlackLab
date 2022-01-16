@@ -66,7 +66,7 @@ public class SearchManager {
         int maxConcurrentSearches = config.getPerformance().getMaxConcurrentSearches();
         boolean traceCache = config.getLog().getTrace().isCache();
         //cache = new BlsCache(config.getCache(), maxConcurrentSearches, abandonedCountAbortTimeSec, traceCache, logDatabase);
-        cache = new ResultsCache(blackLab.searchExecutorService());
+        cache = new ResultsCache(config().getCache(), blackLab.searchExecutorService());
 
         // Find the indices
         indexMan = new IndexManager(this, config);
