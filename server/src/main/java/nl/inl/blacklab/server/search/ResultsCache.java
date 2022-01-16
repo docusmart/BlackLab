@@ -1,5 +1,6 @@
 package nl.inl.blacklab.server.search;
 
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -8,6 +9,7 @@ import nl.inl.blacklab.search.results.SearchResult;
 import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
+import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
 import nl.inl.blacklab.server.config.BLSConfigCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +21,8 @@ import java.util.concurrent.*;
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private final ExecutorService threadPool;
-    private final LoadingCache<Search<? extends SearchResult>, SearchResult> searchCache;
+    private final AsyncLoadingCache<Search<? extends SearchResult>, SearchResult> searchCache;
+    private final ConcurrentHashMap<Search<? extends SearchResult>, Future<? extends SearchResult>> runningJobs = new ConcurrentHashMap<>();
 
 
     public static class CacheEntryWithResults<T extends SearchResult> extends SearchCacheEntry<T> {
@@ -70,55 +73,45 @@ public class ResultsCache implements SearchCache {
         CacheLoader<Search<? extends SearchResult>, SearchResult> cacheLoader = new CacheLoader<Search<? extends SearchResult>, SearchResult>() {
             @Override
             public @Nullable SearchResult load(Search<?> search) throws Exception {
-                Future<SearchResult> job = threadPool.submit(() ->  {
-                    logger.info("Executing search: {}", search.toString());
-                    return search.executeInternal();
-                });
-                return job.get();
+                long start = System.currentTimeMillis();
+                Future<? extends SearchResult> job;
+                if (runningJobs.containsKey(search)) {
+                    job = runningJobs.get(search);
+                } else {
+                    job = threadPool.submit(search::executeInternal);
+                    runningJobs.put(search, job);
+                }
+                SearchResult searchResult = job.get();
+                logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
+                runningJobs.remove(search);
+                return searchResult;
             }
         };
 
         searchCache = Caffeine.newBuilder()
-            .maximumSize(1_000)
+            .maximumSize(10_000)
             .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
             .recordStats()
-            .build(cacheLoader);
+            .buildAsync(cacheLoader);
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
-        //simple case the result is in the cache
-        /*SearchResult result = searches.getIfPresent(search);
-        if (result != null) {
-            return new ResultsCache.CacheEntryWithResults<>((T) result);
+        try {
+            //SearchResult searchResult = searchCache.synchronous().get(search);
+            //return new CacheEntryWithResults(searchResult);
+            CompletableFuture<SearchResult> resultCF = searchCache.get(search);
+            return new SearchCacheEntryFromFuture(resultCF);
+        }catch (Exception ex) {
+            ex.printStackTrace();
+            throw ex;
         }
-        if (runningSearches.containsKey(search)) {
-            Future<? extends SearchResult> future = runningSearches.get(search);
-            if (future != null) {
-                return new SearchCacheEntryFromFuture<>((Future<T>) future);
-            } else {
-                logger.warn("future was null. Maybe value is in the cache?");
-                return new ResultsCache.CacheEntryWithResults<>((T)searches.getIfPresent(search));
-            }
-        }
-
-        Future<T> searchExecution = threadPool.submit(() -> {
-            T results = search.executeInternal();
-            this.searches.put(search, (T) results);
-            this.runningSearches.remove(search);
-            return results;
-        });
-        runningSearches.put(search, searchExecution);
-        return new SearchCacheEntryFromFuture<>(searchExecution);
-         */
-        SearchResult searchResult = searchCache.get(search);
-        return new CacheEntryWithResults(searchResult);
     }
 
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> remove(Search<T> search) {
         if (searchCache.asMap().containsKey(search)) {
-            SearchResult searchResult = searchCache.get(search);
-            searchCache.invalidate(search);
+            SearchResult searchResult = searchCache.synchronous().get(search);
+            searchCache.synchronous().invalidate(search);
             return new CacheEntryWithResults(searchResult);
         }
         return null;
@@ -131,7 +124,7 @@ public class ResultsCache implements SearchCache {
 
     @Override
     public void clear(boolean cancelRunning) {
-        searchCache.invalidateAll();
+        searchCache.synchronous().invalidateAll();
     }
 
     @Override
