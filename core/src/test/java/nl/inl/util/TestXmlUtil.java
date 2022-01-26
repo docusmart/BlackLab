@@ -15,8 +15,16 @@
  *******************************************************************************/
 package nl.inl.util;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.StringWriter;
 
 public class TestXmlUtil {
 
@@ -49,5 +57,45 @@ public class TestXmlUtil {
         // Replace with non-breaking spaces; keep trailing space
         Assert.assertEquals("test\u00A0test\u00A0", XmlUtil.xmlToPlainText("test test ", true));
     }
+
+    @Test(expected = JsonParseException.class)
+    public void testYamlMultiLineNotCanonical() throws Exception {
+        String key = "SomeKey:\n\nA";
+        ObjectMapper jsonMapper = Json.getJsonObjectMapper();
+        ObjectNode jsonRoot = jsonMapper.createObjectNode();
+        jsonRoot.put(key, 302);
+
+        YAMLFactory yamlFactory = new YAMLFactory();
+        ObjectMapper yamlObjectMapper = new ObjectMapper(yamlFactory);
+        yamlObjectMapper.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, true);
+        StringWriter swriter = new StringWriter();
+
+        yamlObjectMapper.writeValue(swriter, jsonRoot);
+
+        ObjectMapper readMapper =  Json.getYamlObjectMapper();
+        ObjectNode readJsonRoot = (ObjectNode) readMapper.readTree(swriter.toString());
+        Assert.assertEquals(readJsonRoot.get(key).asInt(),302 );
+    }
+
+    @Test
+    public void testYamlMultiLineWithCanonical() throws Exception {
+        String key = "SomeKey:\n\nA";
+        ObjectMapper jsonMapper = Json.getJsonObjectMapper();
+        ObjectNode jsonRoot = jsonMapper.createObjectNode();
+        jsonRoot.put(key, 302);
+
+        YAMLFactory yamlFactory = new YAMLFactory();
+        yamlFactory.configure(YAMLGenerator.Feature.CANONICAL_OUTPUT, true);
+        ObjectMapper yamlObjectMapper = new ObjectMapper(yamlFactory);
+        yamlObjectMapper.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, true);
+        StringWriter swriter = new StringWriter();
+
+        yamlObjectMapper.writeValue(swriter, jsonRoot);
+
+        ObjectMapper readMapper =  Json.getYamlObjectMapper();
+        ObjectNode readJsonRoot = (ObjectNode) readMapper.readTree(swriter.toString());
+        Assert.assertEquals(readJsonRoot.get(key).asInt(),302 );
+    }
+
 
 }
