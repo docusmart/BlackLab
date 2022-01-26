@@ -82,7 +82,7 @@ public class Json {
      */
     public static String getString(JsonNode parent, String name, String defVal) {
         if (parent.has(name))
-            return parent.get(name).textValue();
+            return parent.get(name).asText(defVal);
         return defVal;
     }
 

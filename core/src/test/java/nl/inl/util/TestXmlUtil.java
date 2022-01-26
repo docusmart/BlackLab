@@ -15,6 +15,7 @@
  *******************************************************************************/
 package nl.inl.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,6 +26,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TestXmlUtil {
 
@@ -58,35 +61,17 @@ public class TestXmlUtil {
         Assert.assertEquals("test\u00A0test\u00A0", XmlUtil.xmlToPlainText("test test ", true));
     }
 
-    @Test(expected = JsonParseException.class)
-    public void testYamlMultiLineNotCanonical() throws Exception {
-        String key = "SomeKey:\n\nA";
-        ObjectMapper jsonMapper = Json.getJsonObjectMapper();
-        ObjectNode jsonRoot = jsonMapper.createObjectNode();
-        jsonRoot.put(key, 302);
-
-        YAMLFactory yamlFactory = new YAMLFactory();
-        ObjectMapper yamlObjectMapper = new ObjectMapper(yamlFactory);
-        yamlObjectMapper.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, true);
-        StringWriter swriter = new StringWriter();
-
-        yamlObjectMapper.writeValue(swriter, jsonRoot);
-
-        ObjectMapper readMapper =  Json.getYamlObjectMapper();
-        ObjectNode readJsonRoot = (ObjectNode) readMapper.readTree(swriter.toString());
-        Assert.assertEquals(readJsonRoot.get(key).asInt(),302 );
-    }
-
     @Test
     public void testYamlMultiLineWithCanonical() throws Exception {
-        String key = "SomeKey:\n\nA";
+        String []keys = new String[]{"SomeKeyString:\n\nAnotherLine", "SomeKeyInteger:\n\nAnotherLine","SomeKeyBoolean:\n\nAnotherLine", "Simple"};
         ObjectMapper jsonMapper = Json.getJsonObjectMapper();
         ObjectNode jsonRoot = jsonMapper.createObjectNode();
-        jsonRoot.put(key, 302);
+        jsonRoot.put(keys[0], "valstring");
+        jsonRoot.put(keys[1], 20);
+        jsonRoot.put(keys[2], true);
+        jsonRoot.put(keys[3], "simple");
 
-        YAMLFactory yamlFactory = new YAMLFactory();
-        yamlFactory.configure(YAMLGenerator.Feature.CANONICAL_OUTPUT, true);
-        ObjectMapper yamlObjectMapper = new ObjectMapper(yamlFactory);
+        ObjectMapper yamlObjectMapper = Json.getYamlObjectMapper();
         yamlObjectMapper.configure(JsonParser.Feature.STRICT_DUPLICATE_DETECTION, true);
         StringWriter swriter = new StringWriter();
 
@@ -94,7 +79,10 @@ public class TestXmlUtil {
 
         ObjectMapper readMapper =  Json.getYamlObjectMapper();
         ObjectNode readJsonRoot = (ObjectNode) readMapper.readTree(swriter.toString());
-        Assert.assertEquals(readJsonRoot.get(key).asInt(),302 );
+        Assert.assertEquals("valstring", Json.getString(readJsonRoot, keys[0], ""));
+        Assert.assertEquals(20, Json.getInt(readJsonRoot, keys[1], 0));
+        Assert.assertEquals(true, Json.getBoolean(readJsonRoot, keys[2], false));
+        Assert.assertEquals("simple", Json.getString(readJsonRoot, keys[3], ""));
     }
 
 
