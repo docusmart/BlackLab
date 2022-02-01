@@ -58,6 +58,11 @@ public class IndexManager {
      */
     private static final String PENDING_DELETION_FILE_MARKER = ".markedfordeletion";
 
+    /**
+     * The frequency at which we check for removed indices in the file system.
+     */
+    private static final int REMOVED_INDICES_MONITOR_CHECK_IN_MS = 1000;
+
     private static final Logger logger = LogManager.getLogger(IndexManager.class);
 
     private SearchManager searchMan;
@@ -131,9 +136,11 @@ public class IndexManager {
 
         checkAnyIndexesAvailable();
         List<File> allDirs = new ArrayList<>(collectionsDirs);
-        allDirs.add(userCollectionsDir);
+        // Since userCollectionsDir is initialized as null, and might still be null here, check for nullity
+        if (userCollectionsDir != null)
+            allDirs.add(userCollectionsDir);
         try {
-            startRemovedIndicesMonitor(allDirs, 1000);
+            startRemovedIndicesMonitor(allDirs, REMOVED_INDICES_MONITOR_CHECK_IN_MS);
         } catch (Exception ex) {
             throw  BlackLabRuntimeException.wrap(ex);
         }
