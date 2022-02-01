@@ -1,5 +1,6 @@
 package nl.inl.blacklab.server.config;
 
+
 import java.util.Collections;
 import java.util.List;
 
