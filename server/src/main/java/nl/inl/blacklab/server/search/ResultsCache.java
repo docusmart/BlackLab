@@ -91,9 +91,12 @@ public class ResultsCache implements SearchCache {
             }
         };
 
+        int maxSize = config.getMaxNumberOfJobs();
+        logger.info("Creating cache with maxSize:{}", maxSize);
         searchCache = Caffeine.newBuilder()
             .recordStats()
-            .maximumSize(1_000_000)
+            .maximumSize(maxSize)
+            .initialCapacity(maxSize / 10)
             .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, "blacklab-results-cache");
