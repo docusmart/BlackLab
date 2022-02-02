@@ -24,7 +24,7 @@ public interface Search<R extends SearchResult> {
      * @throws InvalidQuery
      */
     default R execute() throws InvalidQuery {
-        return execute(true);
+        return execute(false);
     }
 
     /**
@@ -39,6 +39,8 @@ public interface Search<R extends SearchResult> {
      * @throws InvalidQuery
      */
     default R executeNoQueue() throws InvalidQuery {
+        // eginez: improves performance when on a highly loaded server
+        // by deactivating queue management on the cache
         return execute(false);
     }
 
@@ -69,7 +71,9 @@ public interface Search<R extends SearchResult> {
      * @return future result
      */
     default SearchCacheEntry<R> executeAsync() {
-        return executeAsync(true);
+        // eginez: improves performance when on a highly loaded server
+        // by deactivating queue management on the cache
+        return executeAsync(false);
     }
 
     /**
