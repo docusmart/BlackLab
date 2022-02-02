@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.tuple.Pair;
@@ -98,7 +99,7 @@ public class RequestHandlerHits extends RequestHandler {
         if (viewGroup == null)
             viewGroup = "";
 
-        BlsCacheEntry<?> cacheEntry;
+        SearchCacheEntry<?> cacheEntry;
         Hits hits;
         ResultsStats hitsCount;
         ResultsStats docsCount;
@@ -115,9 +116,9 @@ public class RequestHandlerHits extends RequestHandler {
                 docsCount = hits.docsStats();
             } else {
                 // Regular hits request. Start the search.
-                cacheEntry = (BlsCacheEntry<ResultCount>)searchParam.hitsCount().executeAsync(); // always launch totals nonblocking!
+                cacheEntry = searchParam.hitsCount().executeAsync(); // always launch totals nonblocking!
                 hits = searchParam.hitsSample().execute();
-                hitsCount = ((BlsCacheEntry<ResultCount>)cacheEntry).get();
+                hitsCount = ((SearchCacheEntry<ResultCount>)cacheEntry).get();
                 docsCount = searchParam.docsCount().execute();
             }
             // Wait until all hits have been counted.
@@ -139,12 +140,12 @@ public class RequestHandlerHits extends RequestHandler {
         if (!hits.hitsStats().processedAtLeast(windowSettings.first()))
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
 
-        BlsCacheEntry<Hits> cacheEntryWindow = null;
+        SearchCacheEntry<Hits> cacheEntryWindow = null;
         Hits window;
         if (!viewingGroup) {
             // Request the window of hits we're interested in.
             // (we hold on to the cache entry so that we can differentiate between search and count time later)
-            cacheEntryWindow = (BlsCacheEntry<Hits>) searchParam.hitsWindow().executeAsync();
+            cacheEntryWindow = (SearchCacheEntry<Hits>) searchParam.hitsWindow().executeAsync();
             try {
                 window = cacheEntryWindow.get(); // blocks until requested hits window is available
             } catch (InterruptedException | ExecutionException e) {
@@ -183,8 +184,10 @@ public class RequestHandlerHits extends RequestHandler {
         ds.startEntry("summary").startMap();
         // Search time should be time user (originally) had to wait for the response to this request.
         // Count time is the time it took (or is taking) to iterate through all the results to count the total.
-        long searchTime = (cacheEntryWindow == null ? cacheEntry.timeUserWaitedMs() : cacheEntryWindow.timeUserWaitedMs()) + kwicTimeMs;
-        long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
+        //long searchTime = (cacheEntryWindow == null ? cacheEntry.timeUserWaitedMs() : cacheEntryWindow.timeUserWaitedMs()) + kwicTimeMs;
+        //long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
+        long countTime, searchTime;
+        countTime = searchTime = 1;
         logger.info("Total search time is:{} ms", searchTime);
         addSummaryCommonFields(ds, searchParam, searchTime, countTime, null, window.windowStats());
         addNumberOfResultsSummaryTotalHits(ds, hitsCount, docsCount, countTime < 0, null);

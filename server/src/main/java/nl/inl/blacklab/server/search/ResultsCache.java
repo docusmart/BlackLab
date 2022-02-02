@@ -4,6 +4,8 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
 import nl.inl.blacklab.searches.Search;
@@ -82,17 +84,19 @@ public class ResultsCache implements SearchCache {
                     runningJobs.put(search, job);
                 }
                 SearchResult searchResult = job.get();
-                logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
+                //logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
+                logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, "");
                 runningJobs.remove(search);
                 return searchResult;
             }
         };
 
         searchCache = Caffeine.newBuilder()
-            .maximumSize(10_000)
-            .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
             .recordStats()
+            .maximumSize(1_000_000)
+            .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
             .buildAsync(cacheLoader);
+        CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, "blacklab-results-cache");
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
