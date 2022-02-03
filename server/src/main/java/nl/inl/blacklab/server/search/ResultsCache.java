@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
@@ -91,7 +92,7 @@ public class ResultsCache implements SearchCache {
                 if (runningJobs.containsKey(search)) {
                     job = runningJobs.get(search);
                 } else {
-                    job = threadPool.submit(search::executeInternal);
+                    job = ResultsCache.this.threadPool.submit(search::executeInternal);
                     runningJobs.put(search, job);
                 }
                 SearchResult searchResult = job.get();
@@ -110,6 +111,7 @@ public class ResultsCache implements SearchCache {
             .initialCapacity(maxSize / 10)
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
+        Metrics.globalRegistry.gaugeMapSize("blacklab-job-queue", Tags.empty(), runningJobs);
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
