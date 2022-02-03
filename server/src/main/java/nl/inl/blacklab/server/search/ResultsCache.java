@@ -3,9 +3,9 @@ package nl.inl.blacklab.server.search;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
@@ -18,12 +18,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private static final String CACHE_NAME_FOR_METRICS = "blacklab-results-cache";
+    private static final String JOB_QUEUE_FOR_METRICS = "blacklab-job-queue";
+    private final Timer searchTimeTimer = Metrics.globalRegistry.timer("search-time", Tags.empty());
     private final ExecutorService threadPool;
     private final AsyncLoadingCache<Search<? extends SearchResult>, SearchResult> searchCache;
     private final ConcurrentHashMap<Search<? extends SearchResult>, Future<? extends SearchResult>> runningJobs = new ConcurrentHashMap<>();
@@ -83,7 +86,6 @@ public class ResultsCache implements SearchCache {
 
     public ResultsCache(BLSConfigCache config, ExecutorService threadPool)  {
         this.threadPool = threadPool;
-
         CacheLoader<Search<? extends SearchResult>, SearchResult> cacheLoader = new CacheLoader<Search<? extends SearchResult>, SearchResult>() {
             @Override
             public @Nullable SearchResult load(Search<?> search) throws Exception {
@@ -96,9 +98,10 @@ public class ResultsCache implements SearchCache {
                     runningJobs.put(search, job);
                 }
                 SearchResult searchResult = job.get();
+                runningJobs.remove(search);
                 //logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
                 logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, "");
-                runningJobs.remove(search);
+                searchTimeTimer.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
                 return searchResult;
             }
         };
@@ -111,7 +114,7 @@ public class ResultsCache implements SearchCache {
             .initialCapacity(maxSize / 10)
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
-        Metrics.globalRegistry.gaugeMapSize("blacklab-job-queue", Tags.empty(), runningJobs);
+        Metrics.globalRegistry.gaugeMapSize(JOB_QUEUE_FOR_METRICS, Tags.empty(), runningJobs);
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
