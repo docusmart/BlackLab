@@ -58,5 +58,4 @@ public interface SearchCache {
      * Perform any final cleanup.
      */
     void cleanup();
-
 }

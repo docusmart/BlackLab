@@ -108,7 +108,7 @@ public class RequestHandlerHits extends RequestHandler {
         try {
             if (viewingGroup) {
                 // We're viewing a single group. Get the hits from the grouping results.
-                Pair<BlsCacheEntry<?>, Hits> res = getHitsFromGroup(groupBy, viewGroup);
+                Pair<SearchCacheEntry<?>, Hits> res = getHitsFromGroup(groupBy, viewGroup);
                 cacheEntry = res.getLeft();
                 hits = res.getRight();
                 // The hits are already complete - get the stats directly.
@@ -184,10 +184,8 @@ public class RequestHandlerHits extends RequestHandler {
         ds.startEntry("summary").startMap();
         // Search time should be time user (originally) had to wait for the response to this request.
         // Count time is the time it took (or is taking) to iterate through all the results to count the total.
-        //long searchTime = (cacheEntryWindow == null ? cacheEntry.timeUserWaitedMs() : cacheEntryWindow.timeUserWaitedMs()) + kwicTimeMs;
-        //long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
-        long countTime, searchTime;
-        countTime = searchTime = 1;
+        long searchTime = (cacheEntryWindow == null ? cacheEntry.timeUserWaitedMs() : cacheEntryWindow.timeUserWaitedMs()) + kwicTimeMs;
+        long countTime = cacheEntry.threwException() ? -1 : cacheEntry.timeUserWaitedMs();
         logger.info("Total search time is:{} ms", searchTime);
         addSummaryCommonFields(ds, searchParam, searchTime, countTime, null, window.windowStats());
         addNumberOfResultsSummaryTotalHits(ds, hitsCount, docsCount, countTime < 0, null);
@@ -349,11 +347,11 @@ public class RequestHandlerHits extends RequestHandler {
         return hits;
     }
 
-    private Pair<BlsCacheEntry<?>, Hits> getHitsFromGroup(String groupBy, String viewGroup) throws InterruptedException, ExecutionException, InvalidQuery, BlsException {
+    private Pair<SearchCacheEntry<?>, Hits> getHitsFromGroup(String groupBy, String viewGroup) throws InterruptedException, ExecutionException, InvalidQuery, BlsException {
         PropertyValue viewGroupVal = PropertyValue.deserialize(blIndex(), blIndex().mainAnnotatedField(), viewGroup);
         if (viewGroupVal == null)
             throw new BadRequest("ERROR_IN_GROUP_VALUE", "Cannot deserialize group value: " + viewGroup);
-        BlsCacheEntry<HitGroups> jobHitGroups = (BlsCacheEntry<HitGroups>)searchParam.hitsGrouped().executeAsync();
+        SearchCacheEntry<HitGroups> jobHitGroups = searchParam.hitsGrouped().executeAsync();
         HitGroups hitGroups = jobHitGroups.get();
         HitGroup group = hitGroups.get(viewGroupVal);
         if (group == null)

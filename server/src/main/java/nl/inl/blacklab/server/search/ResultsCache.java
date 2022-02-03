@@ -22,6 +22,7 @@ import java.util.concurrent.*;
 
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
+    private static final String CACHE_NAME_FOR_METRICS = "blacklab-results-cache";
     private final ExecutorService threadPool;
     private final AsyncLoadingCache<Search<? extends SearchResult>, SearchResult> searchCache;
     private final ConcurrentHashMap<Search<? extends SearchResult>, Future<? extends SearchResult>> runningJobs = new ConcurrentHashMap<>();
@@ -41,6 +42,16 @@ public class ResultsCache implements SearchCache {
 
         @Override
         public void start() {
+        }
+
+        @Override
+        public long timeUserWaitedMs() {
+            return -1;
+        }
+
+        @Override
+        public boolean threwException() {
+            return false;
         }
 
         @Override
@@ -84,8 +95,8 @@ public class ResultsCache implements SearchCache {
                     runningJobs.put(search, job);
                 }
                 SearchResult searchResult = job.get();
-                //logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
-                logger.warn("EGZ!!! Search time is {}, for {}", System.currentTimeMillis() - start, "");
+                //logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
+                logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, "");
                 runningJobs.remove(search);
                 return searchResult;
             }
@@ -97,9 +108,8 @@ public class ResultsCache implements SearchCache {
             .recordStats()
             .maximumSize(maxSize)
             .initialCapacity(maxSize / 10)
-            .expireAfterWrite(config.getMaxJobAgeSec(), TimeUnit.SECONDS)
             .buildAsync(cacheLoader);
-        CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, "blacklab-results-cache");
+        CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
