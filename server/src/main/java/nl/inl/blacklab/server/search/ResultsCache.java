@@ -115,6 +115,7 @@ public class ResultsCache implements SearchCache {
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
         Metrics.globalRegistry.gaugeMapSize(JOB_QUEUE_FOR_METRICS, Tags.empty(), runningJobs);
+        Metrics.globalRegistry.gauge("hit-rate", Tags.empty(), searchCache, c -> c.synchronous().stats().hitRate());
     }
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
