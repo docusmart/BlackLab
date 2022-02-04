@@ -49,14 +49,9 @@ services:
       - JPDA_ADDRESS=*:5005
       - JPDA_TRANSPORT=dt_socket
     # Create test index. Run Tomcat with JPDA enabled
-    command: >-
-        /bin/bash -c 
-        "cd /usr/local/lib/blacklab-tools &&
-        rm -rf /data/test &&
-        java -cp '*' nl.inl.blacklab.tools.IndexTool create /data/test /input voice-tei &&
-        cd /usr/local/tomcat && catalina.sh jpda run"
+    command: "/bin/bash /etc/blacklab/start-server.sh"
     ports:
-      - "8080:8080"
+      - "${BLACKLAB_TEST_PORT:-8080}:8080"
       - "5005:5005"
     volumes:
       - ./test/data:/input
