@@ -13,7 +13,9 @@ import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
+import nl.inl.blacklab.server.config.BLSConfig;
 import nl.inl.blacklab.server.config.BLSConfigCache;
+import nl.inl.blacklab.server.logging.LogDatabase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -81,7 +83,7 @@ public class ResultsCache implements SearchCache {
         }
     }
 
-    public ResultsCache(BLSConfigCache config, ExecutorService threadPool)  {
+    public ResultsCache(BLSConfig config, ExecutorService threadPool, LogDatabase logDatabase)  {
         this.threadPool = threadPool;
 
         CacheLoader<Search<? extends SearchResult>, SearchResult> cacheLoader = new CacheLoader<Search<? extends SearchResult>, SearchResult>() {
@@ -96,14 +98,13 @@ public class ResultsCache implements SearchCache {
                     runningJobs.put(search, job);
                 }
                 SearchResult searchResult = job.get();
-                //logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, search.toString());
-                logger.warn("Search time is {}, for {}", System.currentTimeMillis() - start, "");
+                logger.warn("Search time is: {}", System.currentTimeMillis() - start);
                 runningJobs.remove(search);
                 return searchResult;
             }
         };
 
-        int maxSize = config.getMaxNumberOfJobs();
+        int maxSize = config.getCache().getMaxNumberOfJobs();
         logger.info("Creating cache with maxSize:{}", maxSize);
         searchCache = Caffeine.newBuilder()
             .recordStats()
@@ -116,10 +117,8 @@ public class ResultsCache implements SearchCache {
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
         try {
-            //SearchResult searchResult = searchCache.synchronous().get(search);
-            //return new CacheEntryWithResults(searchResult);
-            CompletableFuture<SearchResult> resultCF = searchCache.get(search);
-            return new SearchCacheEntryFromFuture(resultCF);
+            CompletableFuture<SearchResult> resultsFuture = searchCache.get(search);
+            return new SearchCacheEntryFromFuture(resultsFuture);
         }catch (Exception ex) {
             ex.printStackTrace();
             throw ex;

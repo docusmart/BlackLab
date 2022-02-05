@@ -9,9 +9,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import nl.inl.blacklab.server.config.BLSConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -116,6 +118,10 @@ public class BlsCache implements SearchCache {
     /** SQLite database to log all our searches to (if enabled) */
     private LogDatabase logDatabase = new LogDatabaseDummy();
 
+    public BlsCache(BLSConfig config, ExecutorService executorService, LogDatabase logDatabase) {
+        this(config.getCache(), config.getPerformance().getMaxConcurrentSearches(),
+            config.getPerformance().getAbandonedCountAbortTimeSec(), config.getLog().getTrace().isCache(), logDatabase);
+    }
     @SuppressWarnings("deprecation")
     public BlsCache(BLSConfigCache config, int maxConcurrentSearches, int abandonedCountAbortTimeSec, boolean trace, LogDatabase logDatabase) {
         this.config = config;
