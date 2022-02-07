@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.commons.lang3.tuple.Pair;
@@ -98,7 +99,7 @@ public class RequestHandlerHits extends RequestHandler {
         if (viewGroup == null)
             viewGroup = "";
 
-        BlsCacheEntry<?> cacheEntry;
+        SearchCacheEntry<?> cacheEntry;
         Hits hits;
         ResultsStats hitsCount;
         ResultsStats docsCount;
@@ -107,7 +108,7 @@ public class RequestHandlerHits extends RequestHandler {
         try {
             if (viewingGroup) {
                 // We're viewing a single group. Get the hits from the grouping results.
-                Pair<BlsCacheEntry<?>, Hits> res = getHitsFromGroup(groupBy, viewGroup);
+                Pair<SearchCacheEntry<?>, Hits> res = getHitsFromGroup(groupBy, viewGroup);
                 cacheEntry = res.getLeft();
                 hits = res.getRight();
                 // The hits are already complete - get the stats directly.
@@ -115,9 +116,9 @@ public class RequestHandlerHits extends RequestHandler {
                 docsCount = hits.docsStats();
             } else {
                 // Regular hits request. Start the search.
-                cacheEntry = (BlsCacheEntry<ResultCount>)searchParam.hitsCount().executeAsync(); // always launch totals nonblocking!
+                cacheEntry = searchParam.hitsCount().executeAsync(); // always launch totals nonblocking!
                 hits = searchParam.hitsSample().execute();
-                hitsCount = ((BlsCacheEntry<ResultCount>)cacheEntry).get();
+                hitsCount = ((SearchCacheEntry<ResultCount>)cacheEntry).get();
                 docsCount = searchParam.docsCount().execute();
             }
             // Wait until all hits have been counted.
@@ -139,12 +140,12 @@ public class RequestHandlerHits extends RequestHandler {
         if (!hits.hitsStats().processedAtLeast(windowSettings.first()))
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
 
-        BlsCacheEntry<Hits> cacheEntryWindow = null;
+        SearchCacheEntry<Hits> cacheEntryWindow = null;
         Hits window;
         if (!viewingGroup) {
             // Request the window of hits we're interested in.
             // (we hold on to the cache entry so that we can differentiate between search and count time later)
-            cacheEntryWindow = (BlsCacheEntry<Hits>) searchParam.hitsWindow().executeAsync();
+            cacheEntryWindow = (SearchCacheEntry<Hits>) searchParam.hitsWindow().executeAsync();
             try {
                 window = cacheEntryWindow.get(); // blocks until requested hits window is available
             } catch (InterruptedException | ExecutionException e) {
@@ -346,11 +347,11 @@ public class RequestHandlerHits extends RequestHandler {
         return hits;
     }
 
-    private Pair<BlsCacheEntry<?>, Hits> getHitsFromGroup(String groupBy, String viewGroup) throws InterruptedException, ExecutionException, InvalidQuery, BlsException {
+    private Pair<SearchCacheEntry<?>, Hits> getHitsFromGroup(String groupBy, String viewGroup) throws InterruptedException, ExecutionException, InvalidQuery, BlsException {
         PropertyValue viewGroupVal = PropertyValue.deserialize(blIndex(), blIndex().mainAnnotatedField(), viewGroup);
         if (viewGroupVal == null)
             throw new BadRequest("ERROR_IN_GROUP_VALUE", "Cannot deserialize group value: " + viewGroup);
-        BlsCacheEntry<HitGroups> jobHitGroups = (BlsCacheEntry<HitGroups>)searchParam.hitsGrouped().executeAsync();
+        SearchCacheEntry<HitGroups> jobHitGroups = searchParam.hitsGrouped().executeAsync();
         HitGroups hitGroups = jobHitGroups.get();
         HitGroup group = hitGroups.get(viewGroupVal);
         if (group == null)

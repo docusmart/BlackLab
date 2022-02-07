@@ -9,9 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import nl.inl.blacklab.searches.CacheInfoDataStream;
+import nl.inl.blacklab.server.config.BLSConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,7 +26,6 @@ import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
 import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
-import nl.inl.blacklab.searches.SearchCount;
 import nl.inl.blacklab.server.config.BLSConfigCache;
 import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.logging.LogDatabase;
@@ -116,6 +118,10 @@ public class BlsCache implements SearchCache {
     /** SQLite database to log all our searches to (if enabled) */
     private LogDatabase logDatabase = new LogDatabaseDummy();
 
+    public BlsCache(BLSConfig config, ExecutorService executorService, LogDatabase logDatabase) {
+        this(config.getCache(), config.getPerformance().getMaxConcurrentSearches(),
+            config.getPerformance().getAbandonedCountAbortTimeSec(), config.getLog().getTrace().isCache(), logDatabase);
+    }
     @SuppressWarnings("deprecation")
     public BlsCache(BLSConfigCache config, int maxConcurrentSearches, int abandonedCountAbortTimeSec, boolean trace, LogDatabase logDatabase) {
         this.config = config;
@@ -514,6 +520,26 @@ public class BlsCache implements SearchCache {
             }
             logDatabase.addCacheInfo(snapshot, searches.size(), numberRunning, cacheSizeBytes, MemoryUtil.getFree(), (long)largestEntryHits * SIZE_OF_HIT, (int)(oldestEntryAgeMs / 1000));
         }
+    }
+
+    @Override
+    public void getCacheStatus(CacheInfoDataStream stream) {
+        if (!(stream instanceof DataStream)) {
+           logger.error("cache status can only be  serialized to Datastream");
+           return;
+        }
+        DataStream dataStream = (DataStream) stream;
+        dataStreamCacheStatus(dataStream);
+    }
+
+    @Override
+    public void getCacheContent(CacheInfoDataStream stream, boolean includeDebugInfo) {
+        if (!(stream instanceof DataStream)) {
+            logger.error("cache content can only be  serialized to Datastream");
+            return;
+        }
+        DataStream dataStream = (DataStream) stream;
+        dataStreamContents(dataStream, includeDebugInfo);
     }
 
     /**
