@@ -9,6 +9,7 @@ import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
+import nl.inl.blacklab.searches.CacheInfoDataStream;
 import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
@@ -148,5 +149,15 @@ public class ResultsCache implements SearchCache {
     @Override
     public void cleanup() {
         clear(true);
+    }
+
+    @Override
+    public void getCacheStatus(CacheInfoDataStream dataStream) {
+        //Noop
+    }
+
+    @Override
+    public void getCacheContent(CacheInfoDataStream dataStream, boolean includeDebugInfo) {
+        //Noop
     }
 }

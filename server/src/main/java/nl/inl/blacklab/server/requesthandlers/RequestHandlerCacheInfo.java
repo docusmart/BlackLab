@@ -30,14 +30,10 @@ public class RequestHandlerCacheInfo extends RequestHandler {
         ds.startMap()
                 .startEntry("cacheStatus");
         SearchCache blackLabCache = searchMan.getBlackLabCache();
-
-        if (blackLabCache instanceof BlsCache) {
-            BlsCache blsCache = (BlsCache) blackLabCache;
-            blsCache.dataStreamCacheStatus(ds);
-            ds.endEntry()
-                .startEntry("cacheContents");
-            blsCache.dataStreamContents(ds, debugInfo);
-        }
+        blackLabCache.getCacheStatus(ds);
+        ds.endEntry()
+            .startEntry("cacheContents");
+        blackLabCache.getCacheContent(ds, debugInfo);
         ds.endEntry()
                 .endMap();
         return HTTP_OK;
