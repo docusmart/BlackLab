@@ -60,6 +60,8 @@ parameters:
 #  Settings for job caching.
 cache:
 
+    # The implementation of the Cache
+    implementation: ResultsCache
     # Maximum size the cache may grow to (in megabytes), or -1 for no limit.
     # (we can only approximate the cache size, because different tasks refer to the same data.
     # In the real-world we will probably stay well under this. On the other hand, cache size is 

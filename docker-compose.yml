@@ -63,7 +63,7 @@ services:
     profiles:
       - tools
     environment:
-      - APP_URL=http://testserver:8080/blacklab-server
+      - APP_URL=${BLACKLAB_SERVER:-http://testserver:8080/blacklab-server}
     build: test
     depends_on:
       - testserver
