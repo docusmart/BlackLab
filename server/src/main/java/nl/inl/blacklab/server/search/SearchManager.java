@@ -2,6 +2,7 @@ package nl.inl.blacklab.server.search;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.concurrent.ExecutorService;
 
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
@@ -150,13 +151,17 @@ public class SearchManager {
 
         try {
             // Load a class via configuration settings
-            SearchCache cache = (SearchCache) Class.forName(fqClassName)
-                .getDeclaredConstructor(BLSConfig.class, ExecutorService.class, LogDatabase.class)
+            // by finding a constructor that matches the below arguments
+            // if no constructor is found, the creation of the class fails.
+            Constructor<?> declaredConstructor = Class.forName(fqClassName)
+                .getDeclaredConstructor(BLSConfig.class, ExecutorService.class, LogDatabase.class);
+            SearchCache cache = (SearchCache) declaredConstructor
                 .newInstance(config, executorService, logDatabase);
             logger.info("Created cache with class: {}", fqClassName);
             return cache;
         } catch (Exception ex) {
-            String message = String.format("Can not create cache with class: %s", fqClassName);
+            String message = String.format("Can not create cache with class: %s. Did you check your implementation" +
+                "matches the expected arguments", fqClassName);
             logger.error(message, ex);
             throw BlackLabRuntimeException.wrap(new ConfigurationException(message));
         }
