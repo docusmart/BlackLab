@@ -3,7 +3,7 @@ package nl.inl.blacklab.server.logging;
 import nl.inl.blacklab.requestlogging.LogLevel;
 import nl.inl.blacklab.requestlogging.SearchLogger;
 import nl.inl.blacklab.search.results.SearchResult;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 
 import java.io.IOException;
 import java.util.List;
@@ -57,7 +57,7 @@ public class ConsoleLogDatabase implements LogDatabase {
     }
 
     @Override
-    public void addCacheInfo(List<BlsCacheEntry<? extends SearchResult>> snapshot, int numberOfSearches, int numberRunning, long sizeBytes, long freeMemoryBytes, long largestEntryBytes, int oldestEntryAgeSec) {
+    public void addCacheInfo(List<SearchCacheEntry<? extends SearchResult>> snapshot, int numberOfSearches, int numberRunning, long sizeBytes, long freeMemoryBytes, long largestEntryBytes, int oldestEntryAgeSec) {
 
     }
 }

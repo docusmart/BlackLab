@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 import nl.inl.blacklab.search.*;
 import nl.inl.blacklab.search.indexmetadata.MetadataField;
 import nl.inl.blacklab.search.results.*;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -37,7 +38,6 @@ import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.jobs.User;
 import nl.inl.blacklab.server.jobs.WindowSettings;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import nl.inl.util.BlockTimer;
@@ -57,10 +57,10 @@ public class RequestHandlerHitsGrouped extends RequestHandler {
     @Override
     public int handle(DataStream ds) throws BlsException, InvalidQuery {
         HitGroups groups;
-        BlsCacheEntry<HitGroups> search;
+        SearchCacheEntry<HitGroups> search;
         try(BlockTimer t = BlockTimer.create("Searching hit groups")) {
             // Get the window we're interested in
-            search = (BlsCacheEntry<HitGroups>)searchParam.hitsGrouped().executeAsync();
+            search = searchParam.hitsGrouped().executeAsync();
             // Search is done; construct the results object
             groups = search.get();
         } catch (InterruptedException | ExecutionException e) {

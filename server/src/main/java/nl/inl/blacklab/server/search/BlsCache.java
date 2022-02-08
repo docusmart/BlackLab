@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import nl.inl.blacklab.searches.CacheInfoDataStream;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.server.config.BLSConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -512,7 +513,7 @@ public class BlsCache implements SearchCache {
                     oldestEntryAgeMs = s.timeSinceCreationMs();
             }
             lastCacheLogMs = System.currentTimeMillis();
-            List<BlsCacheEntry<? extends SearchResult>> snapshot = null;
+            List<SearchCacheEntry<? extends SearchResult>> snapshot = null;
             if (lastCacheLogMs - lastCacheSnapshotMs > LOG_CACHE_SNAPSHOT_INTERVAL_SEC * 1000) {
                 // Every now and then, also capture a cache snapshot
                 snapshot = new ArrayList<>(searches.values());
