@@ -31,6 +31,9 @@ import nl.inl.util.Sort.Sortable;
 
 public abstract class Hits extends Results<Hit, HitProperty> {
 
+    /** A mutable implementation of Hit, to be used for short-lived
+     *  instances used while e.g. iterating through a list of hits.
+     */
     public static class EphemeralHit implements Hit {
         public int doc = -1;
         public int start = -1;
