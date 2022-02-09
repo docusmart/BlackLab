@@ -73,7 +73,6 @@ import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.jobs.ContextSettings;
 import nl.inl.blacklab.server.jobs.User;
 import nl.inl.blacklab.server.jobs.WindowSettings;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
 import nl.inl.blacklab.server.util.BlsUtils;
 
 /**
@@ -372,8 +371,8 @@ public class RequestHandlerHits extends RequestHandler {
             SearchHits findHitsFromOnlyRequestedGroup = getQueryForHitsInSpecificGroupOnly(viewGroupVal, groupByProp, hitGroups);
             if (findHitsFromOnlyRequestedGroup != null) {
                 // place the group-contents query in the cache and return the results.
-                BlsCacheEntry<ResultCount> cacheEntry = (BlsCacheEntry<ResultCount>)findHitsFromOnlyRequestedGroup.count().executeAsync();
-                hits = ((BlsCacheEntry<Hits>)findHitsFromOnlyRequestedGroup.executeAsync()).get();
+                SearchCacheEntry<ResultCount> cacheEntry = findHitsFromOnlyRequestedGroup.count().executeAsync();
+                hits = (findHitsFromOnlyRequestedGroup.executeAsync()).get();
                 return Pair.of(cacheEntry, hits);
             }
 
@@ -386,7 +385,7 @@ public class RequestHandlerHits extends RequestHandler {
             // now run the separate grouping search, making sure not to actually store the hits.
             // Sorting of the resultant groups is not applied, but is also not required because the groups aren't shown, only their contents.
             // If a later query requests the groups in a sorted order, the cache will ensure these results become the input to that query anyway, so worst case we just deferred the work.
-            jobHitGroups = (BlsCacheEntry<HitGroups>)searchGroups.executeAsync(); // place groups with hits in search cache
+            jobHitGroups = searchGroups.executeAsync(); // place groups with hits in search cache
             hits = jobHitGroups
                 .get() //get grouped results
                 .get(viewGroupVal) // get group

@@ -16,11 +16,11 @@ import nl.inl.blacklab.search.results.DocGroups;
 import nl.inl.blacklab.search.results.DocResults;
 import nl.inl.blacklab.search.results.ResultCount;
 import nl.inl.blacklab.search.results.WindowStats;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.server.BlackLabServer;
 import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.jobs.User;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
 
 /**
  * Request handler for grouped doc results.
@@ -35,13 +35,13 @@ public class RequestHandlerDocsGrouped extends RequestHandler {
     public int handle(DataStream ds) throws BlsException, InvalidQuery {
 
         // Make sure we have the hits search, so we can later determine totals.
-        BlsCacheEntry<ResultCount> originalHitsSearch = null;
+        SearchCacheEntry<ResultCount> originalHitsSearch = null;
         if (searchParam.hasPattern()) {
-            originalHitsSearch = (BlsCacheEntry<ResultCount>)searchParam.hitsCount().executeAsync();
+            originalHitsSearch = searchParam.hitsCount().executeAsync();
         }
         // Get the window we're interested in
         DocResults docResults = searchParam.docs().execute();
-        BlsCacheEntry<DocGroups> groupSearch = (BlsCacheEntry<DocGroups>)searchParam.docsGrouped().executeAsync();
+        SearchCacheEntry<DocGroups> groupSearch = searchParam.docsGrouped().executeAsync();
         DocGroups groups;
         try {
             groups = groupSearch.get();

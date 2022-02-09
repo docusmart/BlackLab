@@ -19,6 +19,7 @@ import nl.inl.blacklab.server.config.BLSConfigCache;
 import nl.inl.blacklab.server.logging.LogDatabase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Map;
@@ -90,6 +91,7 @@ public class ResultsCache implements SearchCache {
         CacheLoader<Search<? extends SearchResult>, SearchResult> cacheLoader = new CacheLoader<Search<? extends SearchResult>, SearchResult>() {
             @Override
             public @Nullable SearchResult load(Search<?> search) throws Exception {
+                ThreadContext.put("requestId", Integer.toHexString(search.hashCode()));
                 long start = System.currentTimeMillis();
                 Future<? extends SearchResult> job;
                 if (runningJobs.containsKey(search)) {

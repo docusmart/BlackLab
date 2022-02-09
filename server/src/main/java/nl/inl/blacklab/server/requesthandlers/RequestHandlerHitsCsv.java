@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
@@ -38,7 +39,6 @@ import nl.inl.blacklab.server.exceptions.BadRequest;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.exceptions.InternalServerError;
 import nl.inl.blacklab.server.jobs.User;
-import nl.inl.blacklab.server.search.BlsCacheEntry;
 
 /**
  * Request handler for hit results.
@@ -88,7 +88,7 @@ public class RequestHandlerHitsCsv extends RequestHandler {
         if (sortBy.isEmpty())
             sortBy = null;
 
-        BlsCacheEntry<?> cacheEntry = null;
+        SearchCacheEntry<?> cacheEntry = null;
         Hits hits = null;
         HitGroups groups = null;
         DocResults subcorpus = searchParam.subcorpus().execute();
@@ -121,7 +121,7 @@ public class RequestHandlerHitsCsv extends RequestHandler {
                 }
             } else {
                 // Use a regular search for hits, so that not all hits are actually retrieved yet, we'll have to construct a pagination view on top of the hits manually
-                cacheEntry = (BlsCacheEntry<Hits>)searchParam.hitsSample().executeAsync();
+                cacheEntry = searchParam.hitsSample().executeAsync();
                 hits = (Hits) cacheEntry.get();
             }
         } catch (InterruptedException | ExecutionException e) {
