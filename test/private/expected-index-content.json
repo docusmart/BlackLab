@@ -1,0 +1,856 @@
+{
+  "summary": {
+    "searchParam": {
+      "indexname": "docuser:test-index-580"
+    },
+    "searchTime": 101,
+    "countTime": 2,
+    "windowFirstResult": 0,
+    "requestedWindowSize": 20,
+    "actualWindowSize": 20,
+    "windowHasPrevious": false,
+    "windowHasNext": true,
+    "stillCounting": false,
+    "numberOfDocs": 70,
+    "numberOfDocsRetrieved": 70,
+    "docFields": {
+      "pidField": "sectionId",
+      "titleField": "sectionId"
+    },
+    "metadataFieldDisplayNames": {
+      "agreementNum": "Agreement num",
+      "docId": "Doc id",
+      "end": "End",
+      "fromInputFile": "From input file",
+      "isSubSection": "Is sub section",
+      "order": "Order",
+      "projectId": "Project id",
+      "section": "Section",
+      "sectionId": "Section id",
+      "sectionTitle": "Section title",
+      "start": "Start"
+    }
+  },
+  "docs": [
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-24",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "6.2 Invoicing and Payment."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "14714"
+        ],
+        "end": [
+          "16024"
+        ],
+        "section": [
+          "Payment"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-24"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "24"
+        ],
+        "lengthInTokens": 239,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-25",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "6.3 Taxes."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "16024"
+        ],
+        "end": [
+          "16534"
+        ],
+        "section": [
+          "Payment"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-25"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "25"
+        ],
+        "lengthInTokens": 100,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-26",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "7. CONFIDENTIALITY"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "16534"
+        ],
+        "end": [
+          "16554"
+        ],
+        "section": [
+          "Confidentiality"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-26"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "26"
+        ],
+        "lengthInTokens": 3,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-27",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "Page 5 of 11"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "16554"
+        ],
+        "end": [
+          "16570"
+        ],
+        "section": [
+          "Unknown"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-27"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "27"
+        ],
+        "lengthInTokens": 4,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-28",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "7.1 Meaning of Confidential Information."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "16631"
+        ],
+        "end": [
+          "17924"
+        ],
+        "section": [
+          "Confidentiality"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-28"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "28"
+        ],
+        "lengthInTokens": 227,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-29",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "7.2 Standard of Care."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "17924"
+        ],
+        "end": [
+          "19130"
+        ],
+        "section": [
+          "Confidentiality"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-29"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "29"
+        ],
+        "lengthInTokens": 217,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-30",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "8. DATA PROTECTION"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "19130"
+        ],
+        "end": [
+          "20347"
+        ],
+        "section": [
+          "DataBreach"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-30"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "30"
+        ],
+        "lengthInTokens": 196,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-31",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "Page 6 of 11"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "20347"
+        ],
+        "end": [
+          "20591"
+        ],
+        "section": [
+          "Unknown"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-31"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "31"
+        ],
+        "lengthInTokens": 33,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-32",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "9. WARRANTIES AND DISCLAIMERS"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "20591"
+        ],
+        "end": [
+          "20622"
+        ],
+        "section": [
+          "LimitationOfLiability"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-32"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "32"
+        ],
+        "lengthInTokens": 5,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-33",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "9.1 Mutual Warranties."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "20622"
+        ],
+        "end": [
+          "20952"
+        ],
+        "section": [
+          "RepresentationsAndWarranties"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-33"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "33"
+        ],
+        "lengthInTokens": 67,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-34",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "9.2 Company Warranties."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "20952"
+        ],
+        "end": [
+          "21854"
+        ],
+        "section": [
+          "RepresentationsAndWarranties"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-34"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "34"
+        ],
+        "lengthInTokens": 157,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-35",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "9.3 Customer Warranties."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "21854"
+        ],
+        "end": [
+          "22248"
+        ],
+        "section": [
+          "LimitationOfLiability"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-35"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "35"
+        ],
+        "lengthInTokens": 75,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-12",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "4.1 Customer Data."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "8701"
+        ],
+        "end": [
+          "9625"
+        ],
+        "section": [
+          "SubscriberData"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-12"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "12"
+        ],
+        "lengthInTokens": 177,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-13",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "Page 3 of 11"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "9625"
+        ],
+        "end": [
+          "9641"
+        ],
+        "section": [
+          "Unknown"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-13"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "13"
+        ],
+        "lengthInTokens": 4,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-14",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "4.2 Aggregated Data."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "9702"
+        ],
+        "end": [
+          "10121"
+        ],
+        "section": [
+          "SubscriberData"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-14"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "14"
+        ],
+        "lengthInTokens": 73,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-15",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "4.3 Reservation of Rights; Suggestions."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "10121"
+        ],
+        "end": [
+          "11214"
+        ],
+        "section": [
+          "Publicity"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-15"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "15"
+        ],
+        "lengthInTokens": 186,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-16",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "0"
+        ],
+        "sectionTitle": [
+          "5. TERM AND TERMINATION"
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "11214"
+        ],
+        "end": [
+          "11239"
+        ],
+        "section": [
+          "Termination Term"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-16"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "16"
+        ],
+        "lengthInTokens": 5,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-17",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "5.1 Term."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "11239"
+        ],
+        "end": [
+          "11815"
+        ],
+        "section": [
+          "SubscriptionTerm Term"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-17"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "17"
+        ],
+        "lengthInTokens": 118,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-18",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "5.2 Termination for Convenience."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "11815"
+        ],
+        "end": [
+          "11964"
+        ],
+        "section": [
+          "Termination"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-18"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "18"
+        ],
+        "lengthInTokens": 25,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    },
+    {
+      "docPid": "0679235d-6d36-411c-829f-85bd569d7583-19",
+      "docInfo": {
+        "fromInputFile": [
+          "testdocs"
+        ],
+        "isSubSection": [
+          "1"
+        ],
+        "sectionTitle": [
+          "5.3 Termination for Cause."
+        ],
+        "docId": [
+          "0679235d-6d36-411c-829f-85bd569d7583"
+        ],
+        "start": [
+          "11964"
+        ],
+        "end": [
+          "12937"
+        ],
+        "section": [
+          "Termination"
+        ],
+        "sectionId": [
+          "0679235d-6d36-411c-829f-85bd569d7583-19"
+        ],
+        "projectId": [
+          "8bd8a52e-dc77-4149-a305-0aab8aadbee3"
+        ],
+        "agreementNum": [
+          "1"
+        ],
+        "order": [
+          "19"
+        ],
+        "lengthInTokens": 177,
+        "mayView": true
+      },
+      "metadataFieldGroups": []
+    }
+  ]
+}
