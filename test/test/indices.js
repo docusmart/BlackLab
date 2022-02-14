@@ -37,7 +37,7 @@ function addDefaultHeaders(request) {
 }
 
 function createIndexName() {
-    indexName = "test-index-" + crypto.randomInt(1000).toString();
+    indexName = "test-index-" + crypto.randomInt(10000).toString();
     return indexName;
 }
 
@@ -96,15 +96,13 @@ async function getIndexContent(indexName) {
     return request.send();
 }
 
-function clearKeys(data, keys) {
-    const cleanData = Object.keys(data).reduce((obj, key) => {
-        if (key in keys) {
-            return obj;
-        }
-        obj[key] = data[key];
-        return obj;
-    }, {});
-    return cleanData
+function clearKeys(keys, data) {
+    var diff = Object.keys(data).filter(k => !keys.includes(k));
+    var cleanedData = {}
+    for (k in diff) {
+        cleanedData[k] = data[k];
+    }
+    return cleanedData
 }
 
 async function getIndexMetadata(indexName) {
@@ -116,6 +114,23 @@ async function getIndexMetadata(indexName) {
     addDefaultHeaders(request);
     return request.send();
 }
+
+async function queryIndex(indexName, pattern, filters, format = 'application/json') {
+    indexUrl = constants.BLACKLAB_USER + ":" + indexName + "/hits";
+    var respFormat = format === "" ? "application/json" : format;
+    let request = chai
+        .request(SERVER_URL)
+        .post("/" + indexUrl + "/")
+        .set('Accept', respFormat)
+    if (filters !== "") {
+        request.query({"patt": pattern, "filter": filters})
+    } else {
+        request.query({"patt": pattern})
+    }
+    addDefaultHeaders(request);
+    return request.send();
+}
+
 
 describe('Indexing tests', () => {
     it('create a new index', async () => {
@@ -168,5 +183,23 @@ describe('Indexing tests', () => {
         var keys = ['indexName', 'displayName', 'versionInfo']
         expect(clearKeys(keys, expectedMetadata)).to.be.deep.equal(clearKeys(keys, body));
     });
+
+    it('query index xml no filter', async () => {
+        indexName = createIndexName();
+        await createInputFormat();
+
+        let createRes = await createIndex(indexName);
+        assert.isTrue(createRes.ok);
+
+        let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
+        assert.isTrue(addReq.ok);
+
+        let queryInd = await queryIndex(indexName, '"120"')
+        assert.isTrue(queryInd.ok);
+        console.log(queryInd.text)
+
+    });
+
+
 });
 
