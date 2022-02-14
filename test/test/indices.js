@@ -6,6 +6,7 @@ const assert = chai.assert;
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
+const parseXmlString = require('xml2js').parseStringPromise;
 chai.use(chaiHttp);
 
 const constants = require('./constants');
@@ -24,6 +25,9 @@ const EXPECTED_INDEX_CONTENT_PATH = path.resolve(__dirname, TEST_DATA_ROOT, EXPE
 
 const EXPECTED_INDEX_METADATA = "expected-index-metadata.json";
 const EXPECTED_INDEX_METADATA_PATH = path.resolve(__dirname, TEST_DATA_ROOT, EXPECTED_INDEX_METADATA);
+
+const EXPECTED_QUERY_PATH = path.resolve(__dirname, TEST_DATA_ROOT, 'expected-query-result.xml');
+
 
 function addDefaultHeaders(request) {
     request.auth(constants.BLACKLAB_USER, constants.BLACKLAB_PASSWORD)
@@ -99,8 +103,17 @@ async function getIndexContent(indexName) {
 function clearKeys(keys, data) {
     var diff = Object.keys(data).filter(k => !keys.includes(k));
     var cleanedData = {}
-    for (k in diff) {
-        cleanedData[k] = data[k];
+    for (let k of diff) {
+        var value = data[k];
+        if (!(value instanceof Array)) {
+            cleanedData[k] = value;
+            continue;
+        }
+        if (value.length === 1 && typeof value[0] === "string" && (value[0].trim() === "" || value[0].trim() === "\n")) {
+            cleanedData[k] = [];
+        } else {
+            cleanedData[k] = value;
+        }
     }
     return cleanedData
 }
@@ -115,12 +128,17 @@ async function getIndexMetadata(indexName) {
     return request.send();
 }
 
-async function queryIndex(indexName, pattern, filters, format = 'application/json') {
+async function toJson(xml) {
+    return parseXmlString(xml);
+}
+
+function queryIndex(indexName, pattern, filters, format = 'application/json') {
     indexUrl = constants.BLACKLAB_USER + ":" + indexName + "/hits";
     var respFormat = format === "" ? "application/json" : format;
     let request = chai
         .request(SERVER_URL)
         .post("/" + indexUrl + "/")
+        .buffer()
         .set('Accept', respFormat)
     if (filters !== "") {
         request.query({"patt": pattern, "filter": filters})
@@ -128,7 +146,14 @@ async function queryIndex(indexName, pattern, filters, format = 'application/jso
         request.query({"patt": pattern})
     }
     addDefaultHeaders(request);
-    return request.send();
+    request.parse((res, callback) => {
+        res.text = '';
+        res.on('data', (chk) => {
+            res.text += chk;
+        });
+        res.on('end', () => callback(null, res.text));
+    });
+    return request.send()
 }
 
 
@@ -184,7 +209,7 @@ describe('Indexing tests', () => {
         expect(clearKeys(keys, expectedMetadata)).to.be.deep.equal(clearKeys(keys, body));
     });
 
-    it('query index xml no filter', async () => {
+    it('unfiltered query index xml', async () => {
         indexName = createIndexName();
         await createInputFormat();
 
@@ -194,10 +219,55 @@ describe('Indexing tests', () => {
         let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
         assert.isTrue(addReq.ok);
 
-        let queryInd = await queryIndex(indexName, '"120"')
+        let queryInd =  await queryIndex(indexName, '"120"', "", "application/xml")
         assert.isTrue(queryInd.ok);
-        console.log(queryInd.text)
+        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)))
+        var body = await toJson(queryInd.body);
+        var keys = ['summary']
+        expect(clearKeys(keys, expectedOutput['blacklabResponse'])).to.be.deep.equal(clearKeys(keys, body['blacklabResponse']));
+    });
 
+    it('filtered query index xml', async () => {
+        indexName = createIndexName();
+        await createInputFormat();
+
+        let createRes = await createIndex(indexName);
+        assert.isTrue(createRes.ok);
+
+        let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
+        assert.isTrue(addReq.ok);
+
+        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)));
+        var keys = ['summary'];
+        var filterTerms = ['"Term" OR "Subscription"', '"Term"'];
+        for (let filter of filterTerms) {
+            let queryInd = await queryIndex(indexName, '"120"', 'section:(' + filter +')', "application/xml")
+            assert.isTrue(queryInd.ok);
+            var body = await toJson(queryInd.body);
+            expect(clearKeys(keys, expectedOutput['blacklabResponse'])).to.be.deep.equal(clearKeys(keys, body['blacklabResponse']));
+        }
+    });
+
+    it('no results query index xml', async () => {
+        indexName = createIndexName();
+        await createInputFormat();
+
+        let createRes = await createIndex(indexName);
+        assert.isTrue(createRes.ok);
+
+        let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
+        assert.isTrue(addReq.ok);
+
+        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)))
+        var keys = ['summary'];
+        var filterTerms = ['"Payment"'];
+        for (filter in filterTerms) {
+            let queryInd = await queryIndex(indexName, '"120"', 'section:(' + filter +')', "application/xml")
+            assert.isTrue(queryInd.ok);
+            var body = await toJson(queryInd.body);
+            var results = clearKeys(keys, body['blacklabResponse']);
+            expect(results['hits']).to.be.empty;
+        }
     });
 
 
