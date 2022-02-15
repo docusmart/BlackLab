@@ -29,4 +29,3 @@ bin
 
 # Exclude *.env files except default .env
 ?*.env
-__pycache__
