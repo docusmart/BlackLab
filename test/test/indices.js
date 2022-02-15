@@ -12,21 +12,21 @@ chai.use(chaiHttp);
 const constants = require('./constants');
 const SERVER_URL = constants.SERVER_URL;
 
-const TEST_DATA_ROOT =  '../private';
+const TEST_DATA_ROOT =  'data/private';
 
 const INPUT_FORMAT_NAME = "test-input-format";
-const INPUT_FORMAT_PATH = path.resolve(__dirname, TEST_DATA_ROOT, INPUT_FORMAT_NAME + ".blf.yml");
+const INPUT_FORMAT_PATH = path.resolve(TEST_DATA_ROOT, INPUT_FORMAT_NAME + ".blf.yml");
 
 const DOC_TO_INDEX = "documents-to-index.xml";
-const DOC_TO_INDEX_PATH = path.resolve(__dirname, TEST_DATA_ROOT, DOC_TO_INDEX);
+const DOC_TO_INDEX_PATH = path.resolve(TEST_DATA_ROOT, DOC_TO_INDEX);
 
 const EXPECTED_INDEX_CONTENT = "expected-index-content.json";
-const EXPECTED_INDEX_CONTENT_PATH = path.resolve(__dirname, TEST_DATA_ROOT, EXPECTED_INDEX_CONTENT);
+const EXPECTED_INDEX_CONTENT_PATH = path.resolve(TEST_DATA_ROOT, EXPECTED_INDEX_CONTENT);
 
 const EXPECTED_INDEX_METADATA = "expected-index-metadata.json";
-const EXPECTED_INDEX_METADATA_PATH = path.resolve(__dirname, TEST_DATA_ROOT, EXPECTED_INDEX_METADATA);
+const EXPECTED_INDEX_METADATA_PATH = path.resolve(TEST_DATA_ROOT, EXPECTED_INDEX_METADATA);
 
-const EXPECTED_QUERY_PATH = path.resolve(__dirname, TEST_DATA_ROOT, 'expected-query-result.xml');
+const EXPECTED_QUERY_PATH = path.resolve(TEST_DATA_ROOT, 'expected-query-result.xml');
 
 
 function addDefaultHeaders(request) {
