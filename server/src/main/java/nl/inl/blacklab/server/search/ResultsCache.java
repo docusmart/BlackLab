@@ -137,6 +137,7 @@ public class ResultsCache implements SearchCache {
                     ThreadContext.put("requestId", requestId);
                     final long startTime = System.currentTimeMillis();
                     SearchResult results = search.executeInternal();
+                    ThreadContext.remove("requestId");
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);
                 }));
                 CacheEntryWithResults<? extends SearchResult> searchResult = job.get();
