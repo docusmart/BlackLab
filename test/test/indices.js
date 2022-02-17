@@ -12,22 +12,13 @@ chai.use(chaiHttp);
 const constants = require('./constants');
 const SERVER_URL = constants.SERVER_URL;
 
-const TEST_DATA_ROOT =  'data/private';
+const TEST_DATA_ROOT =  constants.INDEX_TEST_DATA_ROOT;
+const TEST_CONFIG = JSON.parse(fs.readFileSync(path.resolve(TEST_DATA_ROOT, 'index-test-config.json')));
 
-const INPUT_FORMAT_NAME = "test-input-format";
-const INPUT_FORMAT_PATH = path.resolve(TEST_DATA_ROOT, INPUT_FORMAT_NAME + ".blf.yml");
-
-const DOC_TO_INDEX = "documents-to-index.xml";
-const DOC_TO_INDEX_PATH = path.resolve(TEST_DATA_ROOT, DOC_TO_INDEX);
-
-const EXPECTED_INDEX_CONTENT = "expected-index-content.json";
-const EXPECTED_INDEX_CONTENT_PATH = path.resolve(TEST_DATA_ROOT, EXPECTED_INDEX_CONTENT);
-
-const EXPECTED_INDEX_METADATA = "expected-index-metadata.json";
-const EXPECTED_INDEX_METADATA_PATH = path.resolve(TEST_DATA_ROOT, EXPECTED_INDEX_METADATA);
-
-const EXPECTED_QUERY_PATH = path.resolve(TEST_DATA_ROOT, 'expected-query-result.xml');
-
+const INPUT_FORMAT_PATH = path.resolve(TEST_DATA_ROOT, TEST_CONFIG['input-format']);
+const DOC_TO_INDEX_PATH = path.resolve(TEST_DATA_ROOT, TEST_CONFIG['docs-to-index']);
+const EXPECTED_INDEX_CONTENT_PATH = path.resolve(TEST_DATA_ROOT, TEST_CONFIG['expected-index']);
+const EXPECTED_INDEX_METADATA_PATH = path.resolve(TEST_DATA_ROOT, TEST_CONFIG['expected-metadata']);
 
 function addDefaultHeaders(request) {
     request.auth(constants.BLACKLAB_USER, constants.BLACKLAB_PASSWORD)
@@ -57,13 +48,14 @@ async function createInputFormat(){
 
 async function createIndex(indexName) {
     index_url = constants.BLACKLAB_USER + ":" + indexName
+    inputFormat = TEST_CONFIG['input-format'].split('.')[0];
     let request = chai
         .request(SERVER_URL)
         .post('/')
         .query({
             'name': index_url,
             'display': indexName,
-            'format': constants.BLACKLAB_USER + ":" + INPUT_FORMAT_NAME
+            'format': constants.BLACKLAB_USER + ":" + inputFormat
         })
         .set('Accept', 'application/json')
     addDefaultHeaders(request);
@@ -209,7 +201,7 @@ describe('Indexing tests', () => {
         expect(clearKeys(keys, expectedMetadata)).to.be.deep.equal(clearKeys(keys, body));
     });
 
-    it('unfiltered query index xml', async () => {
+    it('query from config', async () => {
         indexName = createIndexName();
         await createInputFormat();
 
@@ -219,54 +211,22 @@ describe('Indexing tests', () => {
         let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
         assert.isTrue(addReq.ok);
 
-        let queryInd =  await queryIndex(indexName, '"120"', "", "application/xml")
-        assert.isTrue(queryInd.ok);
-        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)))
-        var body = await toJson(queryInd.body);
-        var keys = ['summary']
-        expect(clearKeys(keys, expectedOutput['blacklabResponse'])).to.be.deep.equal(clearKeys(keys, body['blacklabResponse']));
-    });
-
-    it('filtered query index xml', async () => {
-        indexName = createIndexName();
-        await createInputFormat();
-
-        let createRes = await createIndex(indexName);
-        assert.isTrue(createRes.ok);
-
-        let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
-        assert.isTrue(addReq.ok);
-
-        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)));
-        var keys = ['summary'];
-        var filterTerms = ['"Term" OR "Subscription"', '"Term"'];
-        for (let filter of filterTerms) {
-            let queryInd = await queryIndex(indexName, '"120"', 'section:(' + filter +')', "application/xml")
+        var queriesTest = TEST_CONFIG['queries'];
+        for (let [testName, testCase]  of Object.entries(queriesTest)) {
+            console.log("Running test case: " + testName);
+            const filterTerms = testCase['filters'];
+            const queryInd = await queryIndex(indexName, '"120"', filterTerms, "application/xml")
             assert.isTrue(queryInd.ok);
-            var body = await toJson(queryInd.body);
-            expect(clearKeys(keys, expectedOutput['blacklabResponse'])).to.be.deep.equal(clearKeys(keys, body['blacklabResponse']));
-        }
-    });
+            const body = await toJson(queryInd.body);
 
-    it('no results query index xml', async () => {
-        indexName = createIndexName();
-        await createInputFormat();
-
-        let createRes = await createIndex(indexName);
-        assert.isTrue(createRes.ok);
-
-        let addReq = await addToIndex(indexName, DOC_TO_INDEX_PATH);
-        assert.isTrue(addReq.ok);
-
-        var expectedOutput = await toJson(fs.readFileSync((EXPECTED_QUERY_PATH)))
-        var keys = ['summary'];
-        var filterTerms = ['"Payment"'];
-        for (filter in filterTerms) {
-            let queryInd = await queryIndex(indexName, '"120"', 'section:(' + filter +')', "application/xml")
-            assert.isTrue(queryInd.ok);
-            var body = await toJson(queryInd.body);
-            var results = clearKeys(keys, body['blacklabResponse']);
-            expect(results['hits']).to.be.empty;
+            const keys = ['summary'];
+            if (testCase['expected'] === null) {
+                var results = clearKeys(keys, body['blacklabResponse']);
+                expect(results['hits']).to.be.empty;
+            } else {
+                var expectedOutput = await toJson(fs.readFileSync(path.resolve(TEST_DATA_ROOT, testCase['expected'])));
+                expect(clearKeys(keys, expectedOutput['blacklabResponse'])).to.be.deep.equal(clearKeys(keys, body['blacklabResponse']));
+            }
         }
     });
 

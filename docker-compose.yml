@@ -55,7 +55,7 @@ services:
       - "5005:5005"
     volumes:
       - ./test/data:/input
-      - ./test/voice-tei.blf.yaml:/etc/blacklab/formats/voice-tei.blf.yaml
+      - ./test/data/voice-tei.blf.yaml:/etc/blacklab/formats/voice-tei.blf.yaml
       - blacklab-data:/data
 
   # Runs the tests on the test server
@@ -63,7 +63,7 @@ services:
     profiles:
       - tools
     environment:
-      - APP_URL=${BLACKLAB_SERVER:-http://testserver:8080/blacklab-server}
+      - APP_URL=${APP_URL:-http://testserver:8080/blacklab-server}
     build: test
     depends_on:
       - testserver

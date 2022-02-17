@@ -28,7 +28,7 @@ function expectHitsGrouped(pattern, groupBy, numberOfGroups, numberOfHits, numbe
                     const body = res.body;
                     expect(body).to.be.a("object").that.has.all.keys(
                         "summary",
-                        "hitGroups"
+                        "hitGroups", "docInfos"
                     );
 
                 const numberOfResultsInResponse = Math.min(constants.DEFAULT_WINDOW_SIZE, numberOfGroups);
@@ -38,6 +38,8 @@ function expectHitsGrouped(pattern, groupBy, numberOfGroups, numberOfHits, numbe
                 expect(hitGroups).to.be.an("array").that.has.lengthOf(numberOfResultsInResponse);
                 const group = hitGroups[0];
                 if (expectedFirstGroupJson) {
+                    // do not check each hit
+                    delete group['hits']
                     expect(group, 'group').to.deep.equal(expectedFirstGroupJson);
                 } else {
                     expect(group, 'group').to.be.an("object").that.has.all.keys(
