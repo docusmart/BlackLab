@@ -16,7 +16,8 @@ pipeline {
             }
             steps {
                 githubNotify context: 'ci/ann', description: 'Blacklab Build started', status: 'PENDING'
-                sh 'mvn clean package'
+                //sh 'docker-compose build --build-arg CONFIG_ROOT=docker-private --build-arg TOMCAT_APP_NAME=ROOT testserver'
+                sh 'DOCKER_BUILDKIT=1 CONFIG_ROOT=docker-private TOMCAT_APP_NAME=ROOT docker build -f docker/Dockerfile .'
                 //stash name: 'blacklab-build', includes: 'ann-deploy/'
             }
             post {
