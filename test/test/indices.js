@@ -37,11 +37,12 @@ function createIndexName() {
 }
 
 async function createInputFormat(){
+    var formatName = path.basename(INPUT_FORMAT_PATH);
     let request = chai
         .request(SERVER_URL)
         .post('/input-formats')
         .set('Accept', 'application/json')
-        .attach('data', fs.readFileSync(INPUT_FORMAT_PATH), 'format.yml');
+        .attach('data', fs.readFileSync(INPUT_FORMAT_PATH), formatName);
     addDefaultHeaders(request);
     return request;
 }
@@ -83,7 +84,7 @@ async function addToIndex(indexName, payloadPath) {
     return request;
 }
 async function getIndexContent(indexName) {
-    indexUrl = constants.BLACKLAB_USER + ":" + indexName
+    indexUrl = constants.BLACKLAB_USER + ":" + indexName;
     let request = chai
         .request(SERVER_URL)
         .get("/" + indexUrl + "/docs")
@@ -163,7 +164,8 @@ describe('Indexing tests', () => {
     });
     it('adds to index', async () => {
         indexName = createIndexName();
-        await createInputFormat();
+        const req = await createInputFormat();
+        assert.isTrue(req.ok);
 
         let createRes = await createIndex(indexName);
         assert.isTrue(createRes.ok);
