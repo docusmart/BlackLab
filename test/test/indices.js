@@ -199,7 +199,7 @@ describe('Indexing tests', () => {
 
         var expectedMetadata = JSON.parse(fs.readFileSync(EXPECTED_INDEX_METADATA_PATH));
 
-        var keys = ['indexName', 'displayName', 'versionInfo']
+        var keys = ['indexName', 'displayName', 'versionInfo', 'documentFormat']
         expect(clearKeys(keys, expectedMetadata)).to.be.deep.equal(clearKeys(keys, body));
     });
 

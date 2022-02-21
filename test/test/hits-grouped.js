@@ -12,6 +12,7 @@ const util = require('./util');
 function expectHitsGrouped(pattern, groupBy, numberOfGroups, numberOfHits, numberOfDocs, expectedFirstGroupJson) {
     describe(`/hits with pattern ${pattern} grouped by ${groupBy}`, () => {
         it('should return expected response (#groups/hits/docs, structure)', done => {
+
             chai
                 .request(constants.SERVER_URL)
                 .get('/test/hits')
@@ -26,10 +27,11 @@ function expectHitsGrouped(pattern, groupBy, numberOfGroups, numberOfHits, numbe
                     expect(err).to.be.null;
                     expect(res).to.have.status(200);
                     const body = res.body;
-                    expect(body).to.be.a("object").that.has.all.keys(
-                        "summary",
-                        "hitGroups", "docInfos"
-                    );
+                    var keysToCheck = ["summary", "hitGroups"];
+                    if (constants.SHOULD_EXPECT_DOCS_IN_GROUPS) {
+                        keysToCheck = ["summary", "hitGroups", "docInfos"];
+                    }
+                    expect(body).to.be.a("object").that.has.all.keys(keysToCheck);
 
                 const numberOfResultsInResponse = Math.min(constants.DEFAULT_WINDOW_SIZE, numberOfGroups);
 
