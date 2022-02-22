@@ -49,18 +49,13 @@ services:
       - JPDA_ADDRESS=*:5005
       - JPDA_TRANSPORT=dt_socket
     # Create test index. Run Tomcat with JPDA enabled
-    command: >-
-        /bin/bash -c 
-        "cd /usr/local/lib/blacklab-tools &&
-        rm -rf /data/test &&
-        java -cp '*' nl.inl.blacklab.tools.IndexTool create /data/test /input voice-tei &&
-        cd /usr/local/tomcat && catalina.sh jpda run"
+    command: "/bin/bash /etc/blacklab/start-server.sh"
     ports:
-      - "8080:8080"
+      - "${BLACKLAB_TEST_PORT:-8080}:8080"
       - "5005:5005"
     volumes:
       - ./test/data:/input
-      - ./test/voice-tei.blf.yaml:/etc/blacklab/formats/voice-tei.blf.yaml
+      - ./test/data/voice-tei.blf.yaml:/etc/blacklab/formats/voice-tei.blf.yaml
       - blacklab-data:/data
 
   # Runs the tests on the test server
@@ -68,10 +63,16 @@ services:
     profiles:
       - tools
     environment:
-      - APP_URL=http://testserver:8080/blacklab-server
+      - APP_URL=${APP_URL:-http://testserver:8080/blacklab}
+      - BLACKLAB_USER=${BLACKLAB_USER:-}
+      - BLACKLAB_PASSWORD=${BLACKLAB_PASSWORD:-}
+      - DEFAULT_WINDOW_SIZE=${DEFAULT_WINDOW_SIZE:-50}
+      - RESPONSE_SHOULD_HAVE_CONTEXT=${RESPONSE_SHOULD_HAVE_CONTEXT:-true}
+      - RESPONSE_SHOULD_HAVE_DOCS_IN_GROUPS=${RESPONSE_SHOULD_HAVE_DOCS_IN_GROUPS:-false}
     build: test
     depends_on:
       - testserver
+
 
 
 # Volume where our indexes will be stored.

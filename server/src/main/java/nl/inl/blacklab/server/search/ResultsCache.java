@@ -195,6 +195,8 @@ public class ResultsCache implements SearchCache {
 
     @Override
     public void getCacheStatus(CacheInfoDataStream dataStream) {
+        dataStream.startMap();
+        dataStream.endMap();
         //Noop
     }
 

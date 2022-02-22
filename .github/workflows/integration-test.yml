@@ -1,0 +1,22 @@
+name: Run the integration tests
+
+on:
+  push:
+    branches: [ ai2-dev ]
+  pull_request:
+    branches: [ ai2-dev]
+
+env:
+  TOMCAT_APP_NAME: ${{ secrets.TOMCAT_APP_NAME }}
+  APP_URL: ${{ secrets.APP_URL }}
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run integration tests
+      run: test/run.sh
