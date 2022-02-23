@@ -26,7 +26,7 @@ COPY ${CONFIG_ROOT}/server.xml /usr/local/tomcat/conf/
 COPY ${CONFIG_ROOT}/blacklab-server.yaml /etc/blacklab/
 
 # Copy the starup script
-COPY ${CONFIG_ROOT}/start-server.sh /etc/blacklab/start-server.sh
+COPY docker/start-server.sh /etc/blacklab/start-server.sh
 
 # Create directory for formats
 RUN mkdir /etc/blacklab/formats
