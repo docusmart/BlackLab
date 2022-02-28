@@ -11,20 +11,20 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    #strategy:
-      #matrix:
-        #build_type: [local-data, remote-data]
+    strategy:
+      matrix:
+        build_type: [local-data, remote-data]
 
     steps:
     - uses: actions/checkout@v2
     - name: Download data
-      #if: ${{ matrix.build_type == 'remote-data' }}
-      run: test/download-data.sh
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         REMOTE_DATA_URL: ${{ secrets.REMOTE_DATA_URL }}
         REMOTE_CONFIGURATION_URL: ${{ secrets.REMOTE_CONFIGURATION_URL }}
+      if: ${{ matrix.build_type == 'remote-data' && env.REMOTE_DATA_URL != '' }}
+      run: test/download-data.sh
     - name: Run integration tests
       run: test/run.sh
