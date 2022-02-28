@@ -8,8 +8,7 @@ on:
 
 jobs:
 
-  build:
-
+  integration-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
