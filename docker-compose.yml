@@ -44,6 +44,9 @@ services:
     build:
         context: .
         dockerfile: docker/Dockerfile
+        args:
+          # Allow for custom configuration of tomcat/blacklab server if necessary
+          CONFIG_ROOT: ${CONFIG_ROOT:-docker}
     # JPDA settings, to allow remote debugging
     environment:
       - JPDA_ADDRESS=*:5005
@@ -64,11 +67,7 @@ services:
       - tools
     environment:
       - APP_URL=${APP_URL:-http://testserver:8080/blacklab}
-      - BLACKLAB_USER=${BLACKLAB_USER:-}
-      - BLACKLAB_PASSWORD=${BLACKLAB_PASSWORD:-}
-      - DEFAULT_WINDOW_SIZE=${DEFAULT_WINDOW_SIZE:-50}
-      - RESPONSE_SHOULD_HAVE_CONTEXT=${RESPONSE_SHOULD_HAVE_CONTEXT:-true}
-      - RESPONSE_SHOULD_HAVE_DOCS_IN_GROUPS=${RESPONSE_SHOULD_HAVE_DOCS_IN_GROUPS:-false}
+      - INDEX_TEST_DATA_ROOT=${INDEX_TEST_DATA_ROOT:-data}
     build: test
     depends_on:
       - testserver
