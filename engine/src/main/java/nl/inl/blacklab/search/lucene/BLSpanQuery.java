@@ -26,7 +26,6 @@ import org.apache.lucene.search.spans.SpanQuery;
 import org.apache.lucene.search.spans.SpanTermQuery;
 
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
-import nl.inl.blacklab.requestlogging.LogLevel;
 import nl.inl.blacklab.search.fimatch.ForwardIndexAccessor;
 import nl.inl.blacklab.search.fimatch.Nfa;
 import nl.inl.blacklab.search.fimatch.NfaTwoWay;
@@ -271,6 +270,11 @@ public abstract class BLSpanQuery extends SpanQuery {
      * When hit B follows hit A, is it guaranteed that B.start &gt;= A.start? Also,
      * if A.start == B.start, is B.end &gt; A.end?
      *
+     * Any query class that can return false here MUST ensure that its BLSpans will
+     * be sorted (using {@link BLSpans#ensureStartPointSorted(BLSpans)}), so that
+     * all BLSpans are guaranteed to be startpoint sorted (which is necessary for
+     * {@link BLSpans#advanceStartPosition(int)} to work correctly).
+     *
      * @return true if this is guaranteed, false if not
      */
     public abstract boolean hitsStartPointSorted();
@@ -389,11 +393,6 @@ public abstract class BLSpanQuery extends SpanQuery {
     
     public void setQueryInfo(QueryInfo queryInfo) {
         this.queryInfo = queryInfo;
-    }
-    
-    public void log(LogLevel level, String msg) {
-        if (queryInfo != null)
-            queryInfo.log(level, msg);
     }
 
 }

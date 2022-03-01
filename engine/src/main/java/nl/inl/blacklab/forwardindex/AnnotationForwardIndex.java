@@ -1,14 +1,15 @@
 package nl.inl.blacklab.forwardindex;
 
-import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
-import nl.inl.blacklab.search.indexmetadata.Annotation;
-import nl.inl.util.VersionFile;
-import org.apache.lucene.document.Document;
-
 import java.io.File;
 import java.text.Collator;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.lucene.document.Document;
+
+import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
+import nl.inl.blacklab.search.indexmetadata.Annotation;
+import nl.inl.util.VersionFile;
 
 /**
  * A component that can quickly tell you what word occurs at a specific position
@@ -251,6 +252,16 @@ public abstract class AnnotationForwardIndex {
     public abstract List<int[]> retrievePartsInt(int fiid, int[] start, int[] end);
 
     /**
+     * Retrieve token ids for the entire document.
+     * @param fiid forward index id
+     * @return token ids for the entire document.
+     */
+    public int[] getDocument(int fiid) {
+        int[] fullDoc = new int[] { -1 };
+        return retrievePartsInt(fiid, fullDoc, fullDoc).get(0);
+    }
+
+    /**
      * Get the Terms object in order to translate ids to token strings
      * 
      * @return the Terms object
@@ -287,7 +298,9 @@ public abstract class AnnotationForwardIndex {
     }
 
     /**
-     * Gets the length (in tokens) of a document
+     * Gets the length (in tokens) of a document.
+     *
+     * NOTE: this INCLUDES the extra closing token at the end of the document!
      * 
      * @param fiid forward index id of a document
      * @return length of the document
@@ -303,8 +316,7 @@ public abstract class AnnotationForwardIndex {
         if (!initialized)
             initialize();
         for (Integer fiid: idSet()) {
-            int[] tokenIds = retrievePartsInt(fiid, new int[] { -1 }, new int[] { -1 }).get(0);
-            task.perform(fiid, tokenIds);
+            task.perform(fiid, getDocument(fiid));
         }
     }
 

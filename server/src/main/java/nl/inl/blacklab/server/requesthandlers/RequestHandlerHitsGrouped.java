@@ -44,9 +44,9 @@ public class RequestHandlerHitsGrouped extends RequestHandler {
     public int handle(DataStream ds) throws BlsException, InvalidQuery {
         HitGroups groups;
         SearchCacheEntry<HitGroups> search;
-        try(BlockTimer t = BlockTimer.create("Searching hit groups")) {
+        try (BlockTimer ignored = BlockTimer.create("Searching hit groups")) {
             // Get the window we're interested in
-            search = searchParam.hitsGrouped().executeAsync();
+            search = searchParam.hitsGroupedStats().executeAsync();
             // Search is done; construct the results object
             groups = search.get();
         } catch (InterruptedException | ExecutionException e) {
@@ -56,7 +56,7 @@ public class RequestHandlerHitsGrouped extends RequestHandler {
         ds.startMap();
         ds.startEntry("summary").startMap();
         WindowSettings windowSettings = searchParam.getWindowSettings();
-        final int first = windowSettings.first() < 0 ? 0 : windowSettings.first();
+        final int first = Math.max(windowSettings.first(), 0);
         DefaultMax pageSize = searchMan.config().getParameters().getPageSize();
         final int requestedWindowSize = windowSettings.size() < 0
                 || windowSettings.size() > pageSize.getMax() ? pageSize.getDefaultValue()
@@ -83,8 +83,6 @@ public class RequestHandlerHitsGrouped extends RequestHandler {
 
         addNumberOfResultsSummaryTotalHits(ds, hitsStats, docsStats, false, subcorpusSize);
         ds.endMap().endEntry();
-
-        searchLogger.setResultsFound(groups.size());
 
         /* Gather group values per property:
          * In the case we're grouping by multiple values, the DocPropertyMultiple and PropertyValueMultiple will

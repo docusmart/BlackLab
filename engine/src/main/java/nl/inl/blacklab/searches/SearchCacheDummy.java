@@ -13,7 +13,7 @@ public final class SearchCacheDummy implements SearchCache {
     @Override
     public <R extends SearchResult> SearchCacheEntry<R> getAsync(Search<R> search, boolean allowQueue) {
         try {
-            return SearchCacheEntry.fromFuture(ConcurrentUtils.constantFuture(search.executeInternal())); // It's never in cache, and don't add it either
+            return SearchCacheEntry.fromFuture(ConcurrentUtils.constantFuture(search.executeInternal()), search); // It's never in cache, and don't add it either
         } catch (InvalidQuery e) {
             throw BlackLabRuntimeException.wrap(e);
         }
@@ -38,15 +38,5 @@ public final class SearchCacheDummy implements SearchCache {
     @Override
     public void cleanup() {
         // NOP
-    }
-
-    @Override
-    public void getCacheStatus(CacheInfoDataStream dataStream) {
-        //Noop
-    }
-
-    @Override
-    public void getCacheContent(CacheInfoDataStream dataStream, boolean includeDebugInfo) {
-        //Noop
     }
 }

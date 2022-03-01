@@ -29,6 +29,9 @@ import nl.inl.blacklab.search.Span;
  *
  * The default implementation is appropriate for Spans classes that return only
  * single-term hits.
+ *
+ * Note that Spans will iterate through a Lucene index segment in a single thread,
+ * therefore Spans and subclasses don't need to be thread-safe.
  */
 public abstract class BLSpans extends Spans {
 
@@ -109,6 +112,22 @@ public abstract class BLSpans extends Spans {
 
     static String inf(int max) {
         return BLSpanQuery.inf(max);
+    }
+
+    /**
+     * Ensure that given spans are startpoint-sorted within documents.
+     *
+     * It is assumed that they are already document-sorted, or at least
+     * all hits from one document are contiguous.
+     *
+     * Just uses PerDocumentSortedSpans for now, but could be perhaps be
+     * optimized to only look at startpoints within the document.
+     *
+     * @param spans spans that may not be startpoint sorted
+     * @return startpoint sorted spans
+     */
+    public static BLSpans ensureStartPointSorted(BLSpans spans) {
+        return optSortUniq(spans, true, false);
     }
 
     public static BLSpans optSortUniq(BLSpans spans, boolean sort, boolean removeDuplicates) {

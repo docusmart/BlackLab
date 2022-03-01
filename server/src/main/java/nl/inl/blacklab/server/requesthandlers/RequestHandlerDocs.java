@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
-import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.lucene.document.Document;
 
 import nl.inl.blacklab.exceptions.InvalidQuery;
@@ -26,7 +25,8 @@ import nl.inl.blacklab.search.results.DocResults;
 import nl.inl.blacklab.search.results.Hit;
 import nl.inl.blacklab.search.results.Hits;
 import nl.inl.blacklab.search.results.Kwics;
-import nl.inl.blacklab.search.results.ResultCount;
+import nl.inl.blacklab.search.results.ResultsStats;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.server.BlackLabServer;
 import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
@@ -44,7 +44,7 @@ public class RequestHandlerDocs extends RequestHandler {
     }
 
     SearchCacheEntry<?> search = null;
-    SearchCacheEntry<ResultCount> originalHitsSearch;
+    SearchCacheEntry<ResultsStats> originalHitsSearch;
     DocResults totalDocResults;
     DocResults window;
     private DocResults docResults;
@@ -64,7 +64,7 @@ public class RequestHandlerDocs extends RequestHandler {
         // Make sure we have the hits search, so we can later determine totals.
         originalHitsSearch = null;
         if (searchParam.hasPattern()) {
-            originalHitsSearch = searchParam.hitsCount().executeAsync();
+            originalHitsSearch = searchParam.hitsSample().hitCount().executeAsync();
         }
 
         if (groupBy.length() > 0 && viewGroup.length() > 0) {
@@ -151,7 +151,7 @@ public class RequestHandlerDocs extends RequestHandler {
         totalTime = total.threwException() ? -1 : total.timeUserWaitedMs();
 
         return doResponse(ds, false, new HashSet<>(this.getAnnotationsToWrite()), this.getMetadataToWrite());
-}
+    }
 
     private int doResponse(DataStream ds, boolean isViewGroup, Set<Annotation> annotationsTolist, Set<MetadataField> metadataFieldsToList) throws BlsException, InvalidQuery {
         BlackLabIndex blIndex = blIndex();
@@ -169,13 +169,13 @@ public class RequestHandlerDocs extends RequestHandler {
 
         // The summary
         ds.startEntry("summary").startMap();
-        ResultCount totalHits;
+        ResultsStats totalHits, docsStats;
         try {
-            totalHits = originalHitsSearch == null ? null : originalHitsSearch.get();
-        } catch (InterruptedException | ExecutionException e) {
+            totalHits = originalHitsSearch == null ? null : originalHitsSearch.peek();
+            docsStats = searchParam.docsCount().executeAsync().peek();
+        } catch (ExecutionException e) {
             throw RequestHandler.translateSearchException(e);
         }
-        ResultCount docsStats = searchParam.docsCount().execute();
         addSummaryCommonFields(ds, searchParam, search.timeUserWaitedMs(), totalTime, null, window.windowStats());
         boolean countFailed = totalTime < 0;
         if (totalHits == null)
@@ -194,8 +194,6 @@ public class RequestHandlerDocs extends RequestHandler {
         ds.endEntry();
 
         ds.endMap().endEntry();
-
-        searchLogger.setResultsFound(docsStats.processedSoFar());
 
         // The hits and document info
         ds.startEntry("docs").startList();

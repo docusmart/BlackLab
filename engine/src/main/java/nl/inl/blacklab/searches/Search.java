@@ -1,7 +1,6 @@
 package nl.inl.blacklab.searches;
 
 import nl.inl.blacklab.exceptions.InvalidQuery;
-import nl.inl.blacklab.requestlogging.LogLevel;
 import nl.inl.blacklab.search.results.QueryInfo;
 import nl.inl.blacklab.search.results.SearchResult;
 
@@ -119,6 +118,17 @@ public interface Search<R extends SearchResult> {
      */
     R executeInternal() throws InvalidQuery;
 
+    /**
+     * Peek at the result of some operations even if the operation isn't finished yet.
+     *
+     * Used for running counts.
+     *
+     * @return the result so far, or null if not supported for this operation
+     */
+    default R peek() {
+        return null;
+    }
+
     @Override
     boolean equals(Object obj);
 
@@ -129,14 +139,5 @@ public interface Search<R extends SearchResult> {
 
     @Override
     String toString();
-
-    /**
-     * Log details about the search's execution.
-     * @param level log level
-     * @param msg message to log
-     */
-    default void log(LogLevel level, String msg) {
-        queryInfo().log(level, msg);
-    }
 
 }
