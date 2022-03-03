@@ -32,6 +32,8 @@ import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.util.Bits;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
@@ -667,6 +669,17 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
                 }
             }
         }
+
+        reader.addReaderClosedListener(reader -> {
+            String indexName = "unknown";
+            if (BlackLabIndexImpl.this.blackLab != null) {
+                BlackLabIndex blIndex =  BlackLabIndexImpl.this.blackLab.indexFromReader(reader);
+                indexName = blIndex != null ? blIndex.name() : "unknown";
+            }
+            ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+            new Exception("Stack trace").printStackTrace(new PrintStream(outstream));
+            logger.debug("Index: {} closed from: {}", indexName, outstream.toString("UTF-8"));
+        });
     }
 
     @Override
