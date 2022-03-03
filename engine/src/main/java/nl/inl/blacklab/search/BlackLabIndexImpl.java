@@ -1,7 +1,9 @@
 package nl.inl.blacklab.search;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -697,6 +699,17 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
                 }
             }
         }
+
+        reader.addReaderClosedListener(reader -> {
+            String indexName = "unknown";
+            if (BlackLabIndexImpl.this.blackLab != null) {
+                BlackLabIndex blIndex =  BlackLabIndexImpl.this.blackLab.indexFromReader(reader);
+                indexName = blIndex != null ? blIndex.name() : "unknown";
+            }
+            ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+            new Exception("Stack trace").printStackTrace(new PrintStream(outstream));
+            logger.debug("Index: {} closed from: {}", indexName, outstream.toString("UTF-8"));
+        });
     }
 
     @Override
