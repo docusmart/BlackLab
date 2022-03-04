@@ -22,7 +22,7 @@ public class InterruptedSearch extends BlackLabRuntimeException {
         super(DEFAULT_MESSAGE);
     }
 
-    public InterruptedSearch(InterruptedException e) {
+    public InterruptedSearch(Throwable e) {
         super(DEFAULT_MESSAGE, e);
     }
 
@@ -34,7 +34,7 @@ public class InterruptedSearch extends BlackLabRuntimeException {
         super(message);
     }
 
-    public InterruptedSearch(String message, InterruptedException e) {
+    public InterruptedSearch(String message, Throwable e) {
         super(message, e);
     }
 

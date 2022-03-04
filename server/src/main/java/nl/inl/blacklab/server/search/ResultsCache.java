@@ -98,7 +98,7 @@ public class ResultsCache implements SearchCache {
         }
 
         @Override
-        public T peek() throws ExecutionException {
+        public T peek() {
             return results;
         }
 
