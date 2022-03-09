@@ -7,8 +7,6 @@ import nl.inl.blacklab.search.results.QueryInfo;
 import nl.inl.blacklab.search.results.ResultsStats;
 import nl.inl.blacklab.search.results.SearchResult;
 
-import java.util.concurrent.Future;
-
 /**
  * A 'recipe' of search operations.
  *
