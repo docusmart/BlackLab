@@ -9,15 +9,23 @@ const util = require('./util');
 
 // Test that a hits search for a pattern returns the correct number of hits and docs,
 // and optionally test that the first hit matches (either JSON or text).
-function expectHitsImpl(pattern, numberOfHits, numberOfDocs, expectedFirstHitJson, expectedFirstHitText, firstHitJsonIncludes) {
-    describe(`/hits with pattern ${pattern}`, () => {
+function expectHitsImpl(params, numberOfHits, numberOfDocs, expectedFirstHitJson, expectedFirstHitText, firstHitJsonIncludes) {
+
+    const useParams = typeof params === 'string' ? { patt: params } : params;
+    const pattern = useParams.patt;
+
+    const title = useParams.viewgroup ? `view group from pattern ${pattern}` : `/hits with pattern ${pattern}`;
+
+    describe(title, () => {
         it('should return expected response (#hits/docs, structure)', done => {
             chai.request(constants.SERVER_URL)
             .get('/test/hits')
             .query({
-                patt: pattern,
                 sort: "wordleft:word:i,wordright:word:i,field:pid",
-                wordsaroundhit: 1
+                wordsaroundhit: 1,
+                waitfortotal: "true",
+                //usecache: "no", // causes the search to be executed multiple times (hits, count, etc.)
+                ...useParams
             })
             .set('Accept', 'application/json')
             .end((err, res) => {
@@ -38,9 +46,11 @@ function expectHitsImpl(pattern, numberOfHits, numberOfDocs, expectedFirstHitJso
 
                     "searchParam": {
                         "indexname": "test",
-                        "patt": pattern,
                         "sort": "wordleft:word:i,wordright:word:i,field:pid",
-                        "wordsaroundhit": "1"
+                        "wordsaroundhit": "1",
+                        "waitfortotal": "true",
+                        //"usecache": "no", // causes the search to be executed multiple times (hits, count, etc.)
+                        ...useParams,
                     },
                     "windowFirstResult": 0,
                     "requestedWindowSize": constants.DEFAULT_WINDOW_SIZE,
@@ -132,6 +142,11 @@ function expectHitsJson(pattern, numberOfHits, numberOfDocs, expectedFirstHitJso
 // and optionally test that the first hit text matches the specified text.
 function expectHitsText(pattern, numberOfHits, numberOfDocs, expectedFirstHitText) {
     expectHitsImpl(pattern, numberOfHits, numberOfDocs, undefined, expectedFirstHitText, undefined);
+}
+function expectHitsTextMultipleSearches(pattern, numberOfHits, numberOfDocs, expectedFirstHitText) {
+    for (let i = 0; i < 5; i++) {
+        expectHitsImpl(pattern, numberOfHits, numberOfDocs, undefined, expectedFirstHitText, undefined);
+    }
 }
 
 // Test that a hits search for a pattern returns the correct number of hits and docs,
@@ -234,7 +249,61 @@ expectHitsText('"two|four"', 3, 1, "two");
 expectHitsText('"two"|"four"', 3, 1, "two");
 expectHitsText('[lemma="be" & word="are"]', 7, 2, "are");
 expectHitsText('[lemma="be" & word!="are"]', 35, 3, "'m");
+expectHitsTextMultipleSearches('[lemma="be" & word!="are"]', 35, 3, "'m");
 expectHitsText('<u/> containing "good"', 5, 1, "oh er it 's it 's very good _0 the the er _0 very fresh air and kind people _0");
 
 // Check if docPid, hit start and hit end match
 expectHitsDocPos('"very" "good" within <u/>', 1, 1, 'PRint602', 232, 234);
+
+// View a single group from grouped hits
+expectHitsJson({
+    patt: '"a"',
+    group: 'field:title',
+    viewgroup: 'str:service encounter about visa application for family members',
+}, 5, 1, {
+    "docPid": "PBsve430",
+    "start": 255,
+    "end": 256,
+    "left": {
+      "punct": [
+        " "
+      ],
+      "lemma": [
+        "for"
+      ],
+      "pos": [
+        ""
+      ],
+      "word": [
+        "for"
+      ]
+    },
+    "match": {
+      "punct": [
+        " "
+      ],
+      "lemma": [
+        "a"
+      ],
+      "pos": [
+        ""
+      ],
+      "word": [
+        "a"
+      ]
+    },
+    "right": {
+      "punct": [
+        " "
+      ],
+      "lemma": [
+        "visa"
+      ],
+      "pos": [
+        ""
+      ],
+      "word": [
+        "visa"
+      ]
+    }
+  });

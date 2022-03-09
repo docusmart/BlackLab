@@ -15,6 +15,7 @@ import org.apache.lucene.document.Document;
 import nl.inl.blacklab.exceptions.InvalidQuery;
 import nl.inl.blacklab.resultproperty.DocProperty;
 import nl.inl.blacklab.resultproperty.PropertyValue;
+import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.indexmetadata.IndexMetadata;
 import nl.inl.blacklab.search.indexmetadata.MetadataField;
 import nl.inl.blacklab.search.indexmetadata.MetadataFields;
@@ -155,8 +156,6 @@ public class RequestHandlerDocsCsv extends RequestHandler {
     }
 
     private void writeGroups(DocResults inputDocsForGroups, DocGroups groups, DocResults subcorpusResults, DataStreamPlain ds) throws BlsException {
-        searchLogger.setResultsFound(groups.size());
-
         try {
             // Write the header
             List<String> row = new ArrayList<>();
@@ -206,9 +205,6 @@ public class RequestHandlerDocsCsv extends RequestHandler {
     }
 
     private void writeDocs(DocResults docs, DocGroups fromGroups, DocResults globalSubcorpusSize, DataStreamPlain ds) throws BlsException {
-
-        searchLogger.setResultsFound(docs.size());
-
         try {
             IndexMetadata indexMetadata = this.blIndex().metadata();
             MetadataField pidField = indexMetadata.metadataFields().special(MetadataFields.PID);
@@ -234,7 +230,6 @@ public class RequestHandlerDocsCsv extends RequestHandler {
 
             StringBuilder sb = new StringBuilder();
 
-            int subtractClosingToken = 1;
             for (DocResult docResult : docs) {
                 Document doc = docResult.identity().luceneDoc();
                 row.clear();
@@ -249,7 +244,7 @@ public class RequestHandlerDocsCsv extends RequestHandler {
 
                 // Length field, if applicable
                 if (tokenLengthField != null)
-                    row.add(Integer.toString(Integer.parseInt(doc.get(tokenLengthField)) - subtractClosingToken)); // lengthInTokens
+                    row.add(Integer.toString(Integer.parseInt(doc.get(tokenLengthField)) - BlackLabIndex.IGNORE_EXTRA_CLOSING_TOKEN)); // lengthInTokens
 
                 // other fields in order of appearance
                 for (String fieldId : metadataFieldIds) {

@@ -22,6 +22,7 @@ public class BLSConfigParameters {
 
     private boolean writeHitsAndDocsInGroupedHits = false;
 
+
     @JsonGetter("defaultSearchSensitivity")
     public String getDefaultSearchSensitivityName() {
         return defaultSearchSensitivity.toString();

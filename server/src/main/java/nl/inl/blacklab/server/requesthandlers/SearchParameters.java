@@ -1,7 +1,5 @@
 package nl.inl.blacklab.server.requesthandlers;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -9,7 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -22,7 +19,6 @@ import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 
 import nl.inl.blacklab.exceptions.InvalidQuery;
-import nl.inl.blacklab.requestlogging.SearchLogger;
 import nl.inl.blacklab.resultproperty.DocGroupProperty;
 import nl.inl.blacklab.resultproperty.DocGroupPropertySize;
 import nl.inl.blacklab.resultproperty.DocProperty;
@@ -213,8 +209,6 @@ public class SearchParameters {
     private boolean isDocsOperation;
 
     private List<DocProperty> facetProps;
-
-    private SearchLogger searchLogger;
 
     private SearchParameters(SearchManager searchManager, boolean isDocsOperation) {
         this.searchManager = searchManager;
@@ -591,22 +585,14 @@ public class SearchParameters {
      * @return hits - filtered then sorted
      * @throws BlsException
      */
-    public SearchHits hitsSorted() throws BlsException {
+    private SearchHits hitsSorted() throws BlsException {
         HitSortSettings hitsSortSettings = hitsSortSettings();
         if (hitsSortSettings == null)
             return hitsFiltered();
         return hitsFiltered().sort(hitsSortSettings.sortBy());
     }
 
-    /**
-     * @return hits - filtered then sorted then sampled then counted
-     * @throws BlsException
-     */
-    public SearchCount hitsCount() throws BlsException {
-        return hitsSample().hitCount();
-    }
-
-    public SearchHits hitsFiltered() throws BlsException {
+    private SearchHits hitsFiltered() throws BlsException {
         HitFilterSettings hitFilterSettings = getHitFilterSettings();
         if (hitFilterSettings == null)
             return hits();
@@ -615,8 +601,8 @@ public class SearchParameters {
         return hits().filter(prop, value);
     }
 
-    public SearchHits hits() throws BlsException {
-        SearchEmpty search = blIndex().search(null, getUseCache(), searchLogger);
+    private SearchHits hits() throws BlsException {
+        SearchEmpty search = blIndex().search(null, getUseCache());
         try {
             Query filter = hasFilter() ? getFilterQuery() : null;
             return search.find(getPattern().toQuery(search.queryInfo(), filter), getSearchSettings());
@@ -655,7 +641,7 @@ public class SearchParameters {
         if (pattern == null && docFilterQuery == null) {
             docFilterQuery = new MatchAllDocsQuery();
         }
-        SearchEmpty search = blIndex().search(null, getUseCache(), searchLogger);
+        SearchEmpty search = blIndex().search(null, getUseCache());
         return search.findDocuments(docFilterQuery);
     }
 
@@ -673,16 +659,24 @@ public class SearchParameters {
         if (docFilterQuery == null) {
             docFilterQuery = new MatchAllDocsQuery();
         }
-        SearchEmpty search = blIndex().search(null, getUseCache(), searchLogger);
+        SearchEmpty search = blIndex().search(null, getUseCache());
         return search.findDocuments(docFilterQuery);
     }
 
-    public SearchHitGroups hitsGrouped() throws BlsException {
+    public SearchHitGroups hitsGroupedStats() throws BlsException {
         String groupBy = hitGroupSettings().groupBy();
         HitProperty prop = HitProperty.deserialize(blIndex(), blIndex().mainAnnotatedField(), groupBy);
         if (prop == null)
             throw new BadRequest("UNKNOWN_GROUP_PROPERTY", "Unknown group property '" + groupBy + "'.");
-        return hitsSample().group(prop, Results.NO_LIMIT).sort(hitGroupSortSettings().sortBy());
+        return hitsSample().groupStats(prop, Results.NO_LIMIT).sort(hitGroupSortSettings().sortBy());
+    }
+
+    public SearchHitGroups hitsGroupedWithStoredHits() throws BlsException {
+        String groupBy = hitGroupSettings().groupBy();
+        HitProperty prop = HitProperty.deserialize(blIndex(), blIndex().mainAnnotatedField(), groupBy);
+        if (prop == null)
+            throw new BadRequest("UNKNOWN_GROUP_PROPERTY", "Unknown group property '" + groupBy + "'.");
+        return hitsSample().groupWithStoredHits(prop, Results.NO_LIMIT).sort(hitGroupSortSettings().sortBy());
     }
 
     public SearchDocGroups docsGrouped() throws BlsException {
@@ -695,30 +689,6 @@ public class SearchParameters {
 
     public boolean hasFacets() {
         return getFacets() != null;
-    }
-
-    public String getUrlParam() {
-        try {
-            Set<String> skipEntries = new HashSet<>(Arrays.asList("indexname"));
-            StringBuilder b = new StringBuilder();
-            for (Entry<String, String> e : map.entrySet()) {
-                String name = e.getKey();
-                String value = e.getValue();
-                if (skipEntries.contains(name)
-                        || defaultParameterValues.containsKey(name) && defaultParameterValues.get(name).equals(value))
-                    continue;
-                if (b.length() > 0)
-                    b.append("&");
-                b.append(name).append("=").append(URLEncoder.encode(value, "utf-8"));
-            }
-            return b.toString();
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void setLogger(SearchLogger searchLogger) {
-        this.searchLogger = searchLogger;
     }
 
 }

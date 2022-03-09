@@ -33,7 +33,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.spans.SpanWeight;
 
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
-import nl.inl.blacklab.requestlogging.LogLevel;
 import nl.inl.blacklab.search.BlackLab;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.BlackLabIndexImpl;
@@ -234,12 +233,13 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
         boolean anyRewrittenThisCycle = true;
         int pass = 0;
         BLSpanQuery searchLogger = !cl.isEmpty() && BlackLabIndexImpl.traceOptimization() ? cl.get(0) : null;
-        if (searchLogger != null)
-            searchLogger.log(LogLevel.OPT, "SpanQuerySequence.combineAdjacentClauses() start");
+        if (BlackLabIndexImpl.traceOptimization())
+            logger.debug("SpanQuerySequence.combineAdjacentClauses() start");
         while (anyRewrittenThisCycle) {
-            if (searchLogger != null)
-                searchLogger.log(LogLevel.OPT, "Clauses before " + ord(pass) + " pass: " + StringUtils.join(cl, ", "));
-            pass++;
+            if (BlackLabIndexImpl.traceOptimization()) {
+                logger.debug("Clauses before " + ord(pass) + " pass: " + StringUtils.join(cl, ", "));
+                pass++;
+            }
 
             anyRewrittenThisCycle = false;
 
@@ -255,9 +255,9 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
                     int prio = combiner.priority(left, right, reader);
                     if (searchLogger != null) {
                         if (prio == ClauseCombiner.CANNOT_COMBINE)
-                            searchLogger.log(LogLevel.CHATTY, "(Cannot apply " + combiner + "(" + left + ", " + right + "))");
+                            logger.debug("(Cannot apply " + combiner + "(" + left + ", " + right + "))");
                         else
-                            searchLogger.log(LogLevel.DETAIL, "Can apply " + combiner + "(" + left + ", " + right + "), priority: " + prioName(prio));
+                            logger.debug("Can apply " + combiner + "(" + left + ", " + right + "), priority: " + prioName(prio));
                     }
                     if (prio < highestPrio) {
                         highestPrio = prio;
@@ -269,11 +269,10 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
             // Any combiners found?
             if (highestPrio < ClauseCombiner.CANNOT_COMBINE) {
                 // Yes, execute the highest-prio combiner
-                if (searchLogger != null) {
-                    left = cl.get(highestPrioIndex - 1);
-                    right = cl.get(highestPrioIndex);
-                    searchLogger.log(LogLevel.OPT, "Execute lowest prio number combiner: " + highestPrioCombiner + "(" + left + ", " + right + ")");
-                }
+                left = cl.get(highestPrioIndex - 1);
+                right = cl.get(highestPrioIndex);
+                if (BlackLabIndexImpl.traceOptimization())
+                    logger.info("Execute lowest prio number combiner: " + highestPrioCombiner + "(" + left + ", " + right + ")");
                 left = cl.get(highestPrioIndex - 1);
                 right = cl.get(highestPrioIndex);
                 BLSpanQuery combined = highestPrioCombiner.combine(left, right, reader);
@@ -285,8 +284,8 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
             if (anyRewrittenThisCycle)
                 anyRewritten = true;
         }
-        if (searchLogger != null)
-            searchLogger.log(LogLevel.OPT, "Cannot combine any other clauses. Result: " + StringUtils.join(cl, ", "));
+        if (BlackLabIndexImpl.traceOptimization())
+            logger.info("Cannot combine any other clauses. Result: " + StringUtils.join(cl, ", "));
 
         return anyRewritten;
     }
@@ -694,41 +693,23 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
                 }
             }
 
-            // Now, combine the rest (if any) using the more expensive SpansSequenceRaw,
+            // Now, combine the rest (if any) using the more expensive SpansSequenceWithGap,
             // that takes more complex sequences into account.
             while (parts.size() > 1) {
                 CombiPart left = parts.get(0);
                 CombiPart right = parts.get(1);
 
-                if (USE_SPANS_SEQUENCE_GAPS) {
-                    // Note: the spans coming from SpansSequenceWithGap may not be sorted by end point.
-                    // We keep track of this and sort them manually if necessary.
-                    CombiPart newPart = null;
-                    if (!left.endSorted)
-                        left.spans = PerDocumentSortedSpans.endPoint(left.spans);
-                    if (!right.startSorted)
-                        right.spans = PerDocumentSortedSpans.startPoint(right.spans);
-                    BLSpans newSpans = new SpansSequenceWithGap(left.spans, Gap.NONE, right.spans);
-                    newPart = new CombiPart(newSpans, left.uniqueStart && left.uniqueEnd && right.uniqueStart,
-                            left.uniqueEnd && right.uniqueStart && right.uniqueEnd, left.startSorted, right.sameLength,
-                            left.sameLength && right.sameLength);
-                    parts.remove(0);
-                    parts.set(0, newPart);
-                } else {
-                    // Note: the spans coming from SequenceSpansRaw may not be sorted by end point.
-                    // We keep track of this and sort them manually if necessary.
-                    CombiPart newPart = null;
-                    if (!left.endSorted)
-                        left.spans = PerDocumentSortedSpans.endPoint(left.spans);
-                    if (!right.startSorted)
-                        right.spans = PerDocumentSortedSpans.startPoint(right.spans);
-                    BLSpans newSpans = new SpansSequenceRaw(left.spans, right.spans);
-                    newPart = new CombiPart(newSpans, left.uniqueStart && left.uniqueEnd && right.uniqueStart,
-                            left.uniqueEnd && right.uniqueStart && right.uniqueEnd, left.startSorted, right.sameLength,
-                            left.sameLength && right.sameLength);
-                    parts.remove(0);
-                    parts.set(0, newPart);
-                }
+                // Note: the spans coming from SpansSequenceWithGap may not be sorted by end point.
+                // We keep track of this and sort them manually if necessary.
+                CombiPart newPart = null;
+                if (!right.startSorted)
+                    right.spans = PerDocumentSortedSpans.startPoint(right.spans);
+                BLSpans newSpans = new SpansSequenceWithGap(left.spans, Gap.NONE, right.spans);
+                newPart = new CombiPart(newSpans, left.uniqueStart && left.uniqueEnd && right.uniqueStart,
+                        left.uniqueEnd && right.uniqueStart && right.uniqueEnd, left.startSorted, right.sameLength,
+                        left.sameLength && right.sameLength);
+                parts.remove(0);
+                parts.set(0, newPart);
             }
 
             return parts.get(0).spans;
@@ -773,23 +754,12 @@ public class SpanQuerySequence extends BLSpanQueryAbstract {
 
     @Override
     public boolean hitsEndPointSorted() {
-        for (int i = 0; i < clauses.size() - 1; i++) {
-            if (!clauses.get(i).hitsHaveUniqueEnd())
-                return false;
-        }
-        for (int i = 1; i < clauses.size(); i++) {
-            if (!clauses.get(i).hitsAllSameLength())
-                return false;
-        }
-        return true;
+        return hitsStartPointSorted() && hitsAllSameLength();
     }
 
     @Override
     public boolean hitsStartPointSorted() {
-        for (int i = 0; i < clauses.size() - 1; i++) {
-            if (!clauses.get(i).hitsAllSameLength())
-                return false;
-        }
+        // Both SpansSequenceSimple and SpansSequenceWithGaps guarantee this
         return true;
     }
 

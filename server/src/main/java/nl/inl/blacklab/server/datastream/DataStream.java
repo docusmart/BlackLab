@@ -3,10 +3,10 @@ package nl.inl.blacklab.server.datastream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import nl.inl.blacklab.search.indexmetadata.Annotation;
-import nl.inl.blacklab.searches.CacheInfoDataStream;
 import nl.inl.blacklab.server.util.ServletUtil;
 
 /**
@@ -15,7 +15,7 @@ import nl.inl.blacklab.server.util.ServletUtil;
  * This is faster than building a full object tree first. Intended to replace
  * the DataObject classes.
  */
-public abstract class DataStream implements CacheInfoDataStream {
+public abstract class DataStream {
 
     public static DataStream create(DataFormat format, PrintWriter out, boolean prettyPrint, String jsonpCallback) {
         if (format == DataFormat.JSON)
@@ -23,32 +23,6 @@ public abstract class DataStream implements CacheInfoDataStream {
         if (format == DataFormat.CSV)
             return new DataStreamPlain(out, prettyPrint);
         return new DataStreamXml(out, prettyPrint);
-    }
-
-    /**
-     * Stream a simple status response.
-     *
-     * Status response may indicate success, or e.g. that the server is carrying out
-     * the request and will have results later.
-     *
-     * @param code (string) status code
-     * @param msg the message
-     * @param checkAgainMs advice for how long to wait before asking again (ms) (if
-     *            0, don't include this)
-     * @deprecated checkAgainMs will be removed eventually
-     */
-    @Deprecated
-    public void statusObject(String code, String msg, int checkAgainMs) {
-        startMap()
-                .startEntry("status")
-                .startMap()
-                .entry("code", code)
-                .entry("message", msg);
-        if (checkAgainMs != 0)
-            entry("checkAgainMs", checkAgainMs);
-        endMap()
-                .endEntry()
-                .endMap();
     }
 
     /**
@@ -61,7 +35,14 @@ public abstract class DataStream implements CacheInfoDataStream {
      * @param msg the message
      */
     public void statusObject(String code, String msg) {
-        statusObject(code, msg, 0);
+        startMap()
+                .startEntry("status")
+                .startMap()
+                .entry("code", code)
+                .entry("message", msg);
+        endMap()
+                .endEntry()
+                .endMap();
     }
 
     /**
@@ -118,8 +99,8 @@ public abstract class DataStream implements CacheInfoDataStream {
 
     private final boolean prettyPrintPref;
 
-    /** Should contextList omit empty properties if possible? */
-    protected boolean omitEmptyProperties = false;
+    /** Should contextList omit empty annotations if possible? */
+    protected boolean omitEmptyAnnotations = false;
 
     public DataStream(PrintWriter out, boolean prettyPrint) {
         this.out = out;
@@ -264,7 +245,7 @@ public abstract class DataStream implements CacheInfoDataStream {
     public DataStream entry(String key, boolean value) {
         return startEntry(key).value(value).endEntry();
     }
-    
+
     /* NOTE: the attrEntry methods that follow mirror the entry methods above.
      *       Both sets of methods are intended only for entries in maps.
      *       The attrEntry versions are specifically meant for the case where you're not sure
@@ -305,69 +286,85 @@ public abstract class DataStream implements CacheInfoDataStream {
 
     public abstract DataStream value(String value);
 
-    public DataStream value(Object value) {
-        return value(value == null ? "" : value.toString());
-    }
-
     public abstract DataStream value(long value);
 
     public abstract DataStream value(double value);
 
     public abstract DataStream value(boolean value);
 
+    /**
+     * Output a map.
+     *
+     * May contain nested structures (Map, List) and/or values.
+     *
+     * @param value map to output
+     * @param <S> entry key type
+     * @param <T> entry value type
+     * @return this data stream
+     */
+    public <S, T> DataStream value(Map<S, T> value) {
+        startMap();
+        if (value != null) {
+            for (Map.Entry<S, T> entry : value.entrySet()) {
+                startEntry(entry.getKey().toString()).value(entry.getValue()).endEntry();
+            }
+        }
+        endMap();
+        return this;
+    }
+
+    /**
+     * Output a list.
+     *
+     * May contain nested structures (Map, List) and/or values.
+     *
+     * Uses "item" for the list item name (in XML mode).
+     *
+     * @param value list to output
+     * @param <T> list item type
+     * @return this data stream
+     */
+    public <T> DataStream value(List<T> value) {
+        startList();
+        if (value != null) {
+            for (T item : value) {
+                startItem("item").value(item).endItem();
+            }
+        }
+        endList();
+        return this;
+    }
+
+    /**
+     * Output a value that may be a nested structure (Map or List) or simple value.
+     *
+     * @param value value to output
+     * @return this data stream
+     */
+    public DataStream value(Object value) {
+        if (value instanceof Map) {
+            return value((Map)value);
+        } else if (value instanceof List) {
+            return value((List)value);
+        } else if (value instanceof String) {
+            return value((String)value);
+        } else if (value instanceof Integer || value instanceof Long) {
+            return value(((Number) value).longValue());
+        } else if (value instanceof Double || value instanceof Float) {
+            return value(((Number) value).doubleValue());
+        } else if (value instanceof Boolean) {
+            return value((boolean)value);
+        } else {
+            return value(value == null ? "" : value.toString());
+        }
+    }
+
     public DataStream plain(String value) {
         return print(value);
     }
 
-    public static void main(String[] args) {
-        PrintWriter out = new PrintWriter(System.out);
-
-        DataStream test;
-        test = new DataStreamXml(out, true);
-        go(test, out);
-        test = new DataStreamXml(out, false);
-        go(test, out);
-        test = new DataStreamJson(out, true, null);
-        go(test, out);
-//		test = new DataStreamJson(System.out, false, null);
-//		go(test, out);
-        test = new DataStreamJson(out, false, "myJsonCallback");
-        go(test, out);
-
-        out.flush();
-    }
-
-    private static void go(DataStream test, PrintWriter out) {
-        test
-                .startDocument("test")
-                .entry("fun", true)
-                .startEntry("cats")
-                .startMap()
-                .startAttrEntry("cat", "name", "Sylvie")
-                .startAttrEntry("cat", "prefix:missing", "notdeclared")
-                .startList()
-                .item("place", "Voorschoten")
-                .endList()
-                .endEntry()
-                .startAttrEntry("cat", "name", "Jelmer")
-                .startList()
-                .item("place", "Haarlem")
-                .item("place", "Leiden")
-                .item("place", "Haarlem")
-                .endList()
-                .endEntry()
-                .entry("test", "bla")
-                .attrEntry("test", "attr", "key", "value")
-                .indent().startCompact().startAttrEntry("test", "attr", "key2").value("value2").endAttrEntry()
-                .endCompact().newline()
-                .endMap()
-                .endEntry()
-                .endDocument("test");
-        out.println("");
-    }
-
-    public void setOmitEmptyProperties(boolean omitEmptyProperties) {
-        this.omitEmptyProperties = omitEmptyProperties;
+    public void setOmitEmptyAnnotations(boolean omitEmptyAnnotations) {
+        this.omitEmptyAnnotations = omitEmptyAnnotations;
     }
 
 }

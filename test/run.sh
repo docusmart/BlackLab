@@ -6,9 +6,7 @@ export DOCKER_BUILDKIT=1
 
 # Build and run BlackLab Server
 # (--force-recreate to avoid error 'network not found')
-docker-compose build testserver
-
-docker-compose up --force-recreate -d testserver
+docker-compose up --force-recreate -d --build testserver
 
 # Build and run the test suite
 docker-compose build test

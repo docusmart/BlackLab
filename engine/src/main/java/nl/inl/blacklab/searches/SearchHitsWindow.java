@@ -20,7 +20,7 @@ public class SearchHitsWindow extends SearchHits {
     }
 
     @Override
-    public Hits executeInternal() throws InvalidQuery {
+    public Hits executeInternal(Peekable<Hits> progressReporter) throws InvalidQuery {
         return source.executeNoQueue().window(first, number);
     }
 
@@ -61,7 +61,7 @@ public class SearchHitsWindow extends SearchHits {
     }
 
     @Override
-    protected SearchSettings searchSettings() {
+    public SearchSettings searchSettings() {
         return source.searchSettings();
     }
 }

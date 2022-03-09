@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.servlet.http.HttpServletRequest;
 
-import nl.inl.blacklab.searches.SearchCacheEntry;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.lang3.StringUtils;
@@ -31,6 +30,7 @@ import nl.inl.blacklab.search.results.HitGroup;
 import nl.inl.blacklab.search.results.HitGroups;
 import nl.inl.blacklab.search.results.Hits;
 import nl.inl.blacklab.search.results.Kwics;
+import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.server.BlackLabServer;
 import nl.inl.blacklab.server.datastream.DataFormat;
 import nl.inl.blacklab.server.datastream.DataStream;
@@ -95,8 +95,8 @@ public class RequestHandlerHitsCsv extends RequestHandler {
 
         try {
             if (!StringUtils.isEmpty(groupBy)) {
-                hits = searchParam.hits().execute();
-                groups = searchParam.hitsGrouped().execute();
+                hits = searchParam.hitsSample().execute();
+                groups = searchParam.hitsGroupedWithStoredHits().execute();
 
                 if (viewGroup != null) {
                     PropertyValue groupId = PropertyValue.deserialize(blIndex(), blIndex().mainAnnotatedField(), viewGroup);
@@ -153,8 +153,6 @@ public class RequestHandlerHitsCsv extends RequestHandler {
     }
 
     private void writeGroups(Hits inputHitsForGroups, HitGroups groups, DocResults subcorpusResults, DataStreamPlain ds) throws BlsException {
-        searchLogger.setResultsFound(groups.size());
-
         DocProperty metadataGroupProperties = null;
         if (RequestHandlerHitsGrouped.INCLUDE_RELATIVE_FREQ) {
             metadataGroupProperties = groups.groupCriteria().docPropsOnly();
@@ -262,8 +260,6 @@ public class RequestHandlerHitsCsv extends RequestHandler {
         DocResults subcorpusResults,
         DataStreamPlain ds
     ) throws BlsException {
-        searchLogger.setResultsFound(hits.size());
-
         final Annotation mainTokenProperty = blIndex().mainAnnotatedField().mainAnnotation();
         try {
             // Build the table headers

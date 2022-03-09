@@ -19,7 +19,7 @@ public class SearchHitsSorted extends SearchHits {
     }
 
     @Override
-    public Hits executeInternal() throws InvalidQuery {
+    public Hits executeInternal(Peekable<Hits> progressReporter) throws InvalidQuery {
         return source.executeNoQueue().sort(property);
     }
 
@@ -60,7 +60,7 @@ public class SearchHitsSorted extends SearchHits {
     }
 
     @Override
-    protected SearchSettings searchSettings() {
+    public SearchSettings searchSettings() {
         return source.searchSettings();
     }
 }

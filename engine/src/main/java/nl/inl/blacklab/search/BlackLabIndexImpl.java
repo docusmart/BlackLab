@@ -1,9 +1,40 @@
 package nl.inl.blacklab.search;
 
-import java.io.ByteArrayOutputStream;
+import nl.inl.blacklab.analysis.BLDutchAnalyzer;
+import nl.inl.blacklab.analysis.BLNonTokenizingAnalyzer;
+import nl.inl.blacklab.analysis.BLStandardAnalyzer;
+import nl.inl.blacklab.analysis.BLWhitespaceAnalyzer;
+import nl.inl.blacklab.contentstore.ContentStore;
+import nl.inl.blacklab.contentstore.ContentStoresManager;
+import nl.inl.blacklab.exceptions.*;
+import nl.inl.blacklab.forwardindex.AnnotationForwardIndex;
+import nl.inl.blacklab.forwardindex.ForwardIndex;
+import nl.inl.blacklab.indexers.config.ConfigInputFormat;
+import nl.inl.blacklab.search.indexmetadata.*;
+import nl.inl.blacklab.search.lucene.BLSpanQuery;
+import nl.inl.blacklab.search.results.*;
+import nl.inl.blacklab.searches.SearchCache;
+import nl.inl.blacklab.searches.SearchCacheDummy;
+import nl.inl.blacklab.searches.SearchEmpty;
+import nl.inl.util.LuceneUtil;
+import nl.inl.util.VersionFile;
+import nl.inl.util.XmlHighlighter.UnbalancedTagsStrategy;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.*;
+import org.apache.lucene.search.*;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
+import org.apache.lucene.util.Bits;
+
 import java.io.File;
-import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
@@ -16,67 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.LeafReaderContext;
-import org.apache.lucene.index.MultiFields;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.Weight;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.LockObtainFailedException;
-import org.apache.lucene.util.Bits;
-
-import nl.inl.blacklab.analysis.BLDutchAnalyzer;
-import nl.inl.blacklab.analysis.BLNonTokenizingAnalyzer;
-import nl.inl.blacklab.analysis.BLStandardAnalyzer;
-import nl.inl.blacklab.analysis.BLWhitespaceAnalyzer;
-import nl.inl.blacklab.contentstore.ContentStore;
-import nl.inl.blacklab.contentstore.ContentStoresManager;
-import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
-import nl.inl.blacklab.exceptions.ErrorOpeningIndex;
-import nl.inl.blacklab.exceptions.IndexTooOld;
-import nl.inl.blacklab.exceptions.InvalidConfiguration;
-import nl.inl.blacklab.exceptions.WildcardTermTooBroad;
-import nl.inl.blacklab.forwardindex.AnnotationForwardIndex;
-import nl.inl.blacklab.forwardindex.ForwardIndex;
-import nl.inl.blacklab.indexers.config.ConfigInputFormat;
-import nl.inl.blacklab.requestlogging.SearchLogger;
-import nl.inl.blacklab.search.indexmetadata.AnnotatedField;
-import nl.inl.blacklab.search.indexmetadata.AnnotatedFieldImpl;
-import nl.inl.blacklab.search.indexmetadata.Annotation;
-import nl.inl.blacklab.search.indexmetadata.AnnotationSensitivity;
-import nl.inl.blacklab.search.indexmetadata.Field;
-import nl.inl.blacklab.search.indexmetadata.FieldType;
-import nl.inl.blacklab.search.indexmetadata.IndexMetadataImpl;
-import nl.inl.blacklab.search.indexmetadata.IndexMetadataWriter;
-import nl.inl.blacklab.search.indexmetadata.MatchSensitivity;
-import nl.inl.blacklab.search.indexmetadata.MetadataField;
-import nl.inl.blacklab.search.lucene.BLSpanQuery;
-import nl.inl.blacklab.search.results.ContextSize;
-import nl.inl.blacklab.search.results.DocResults;
-import nl.inl.blacklab.search.results.Hits;
-import nl.inl.blacklab.search.results.QueryInfo;
-import nl.inl.blacklab.search.results.SearchSettings;
-import nl.inl.blacklab.searches.SearchCache;
-import nl.inl.blacklab.searches.SearchCacheDummy;
-import nl.inl.blacklab.searches.SearchEmpty;
-import nl.inl.util.LuceneUtil;
-import nl.inl.util.VersionFile;
-import nl.inl.util.XmlHighlighter.UnbalancedTagsStrategy;
 
 public class BlackLabIndexImpl implements BlackLabIndexWriter {
 
@@ -464,16 +434,16 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
     }
 
     @Override
-    public Hits find(BLSpanQuery query, SearchSettings settings, SearchLogger logger) throws WildcardTermTooBroad {
-        QueryInfo queryInfo = QueryInfo.create(this, fieldFromQuery(query), true, logger);
+    public Hits find(BLSpanQuery query, SearchSettings settings) throws WildcardTermTooBroad {
+        QueryInfo queryInfo = QueryInfo.create(this, fieldFromQuery(query), true);
         return Hits.fromSpanQuery(queryInfo, query, settings == null ? searchSettings() : settings);
     }
 
     @Override
-    public QueryExplanation explain(BLSpanQuery query, SearchLogger searchLogger) throws WildcardTermTooBroad {
+    public QueryExplanation explain(BLSpanQuery query) throws WildcardTermTooBroad {
         try {
             IndexReader indexReader = reader();
-            query.setQueryInfo(QueryInfo.create(this, fieldFromQuery(query), true, searchLogger));
+            query.setQueryInfo(QueryInfo.create(this, fieldFromQuery(query), true));
             return new QueryExplanation(query, query.optimize(indexReader).rewrite(indexReader));
         } catch (IOException e) {
             throw BlackLabRuntimeException.wrap(e);
@@ -563,8 +533,8 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
     }
 
     @Override
-    public DocResults queryDocuments(Query documentFilterQuery, SearchLogger searchLogger) {
-        return DocResults.fromQuery(QueryInfo.create(this, mainAnnotatedField(), true, searchLogger), documentFilterQuery);
+    public DocResults queryDocuments(Query documentFilterQuery) {
+        return DocResults.fromQuery(QueryInfo.create(this, mainAnnotatedField(), true), documentFilterQuery);
     }
 
     public boolean canDoNfaMatching() {
@@ -824,12 +794,6 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
     //----------------------------------------------------------------
 
     @Override
-    @Deprecated
-    public IndexMetadataWriter metadataWriter() {
-        return metadata();
-    }
-
-    @Override
     public IndexWriter openIndexWriter(File indexDir, boolean create, Analyzer useAnalyzer) throws IOException,
             CorruptIndexException, LockObtainFailedException {
         if (!indexDir.exists() && create) {
@@ -1007,8 +971,8 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
     }
 
     @Override
-    public SearchEmpty search(AnnotatedField field, boolean useCache, SearchLogger searchLogger) {
-        return new SearchEmpty(QueryInfo.create(this, field, useCache, searchLogger));
+    public SearchEmpty search(AnnotatedField field, boolean useCache) {
+        return new SearchEmpty(QueryInfo.create(this, field, useCache));
     }
 
     @Override
@@ -1035,4 +999,5 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
     public boolean isOpen() {
         return indexWriter.isOpen();
     }
+
 }

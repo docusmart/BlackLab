@@ -61,7 +61,7 @@ class AnnotationForwardIndexReader extends AnnotationForwardIndex {
     /** Offset of each document */
     long[] offset;
 
-    /** Length of each document */
+    /** Length of each document (INCLUDING the extra closing token at the end) */
     int[] length;
 
     /** Deleted status of each document */
@@ -73,8 +73,8 @@ class AnnotationForwardIndexReader extends AnnotationForwardIndex {
     /** Build term indexes right away or lazily? */
     private boolean buildTermIndexesOnInit;
 
-    AnnotationForwardIndexReader(Annotation annotation, File dir, Collators collators, boolean largeTermsFileSupport, boolean buildTermIndexesOnInit) {
-        super(annotation, dir, collators, largeTermsFileSupport);
+    AnnotationForwardIndexReader(Annotation annotation, File dir, Collators collators, boolean buildTermIndexesOnInit) {
+        super(annotation, dir, collators);
 
         if (!dir.exists()) {
             throw new IllegalArgumentException("ForwardIndex doesn't exist: " + dir);
@@ -99,7 +99,7 @@ class AnnotationForwardIndexReader extends AnnotationForwardIndex {
         //logger.debug("  END   read TOC " + tocFile);
 
         //logger.debug("  START read Terms " + tocFile);
-        terms = Terms.openForReading(collators, termsFile, useBlockBasedTermsFile, buildTermIndexesOnInit);
+        terms = Terms.openForReading(collators, termsFile, buildTermIndexesOnInit);
         //logger.debug("  END   read Terms " + tocFile);
         //logger.debug("  START Terms.initialize() " + tocFile);
         terms.initialize();
@@ -276,16 +276,20 @@ class AnnotationForwardIndexReader extends AnnotationForwardIndex {
             if (whichChunk == null) {
                 throw new BlackLabRuntimeException("Tokens file chunk containing document not found. fiid = " + fiid);
             }
-            ((Buffer)whichChunk).position((int) (offset[fiid] * SIZEOF_INT - chunkOffsetBytes));
-            ib = whichChunk.asIntBuffer();
-
             int snippetLength = end - start;
             int[] snippet = new int[snippetLength];
+            synchronized (whichChunk) {
+                ((Buffer) whichChunk).position((int) (offset[fiid] * SIZEOF_INT - chunkOffsetBytes));
+                ib = whichChunk.asIntBuffer();
 
-            // The file is mem-mapped (search mode).
-            // Position us at the correct place in the file.
-            ib.position(start);
-            ib.get(snippet);
+                // The file is mem-mapped (search mode).
+                // Position us at the correct place in the file.
+                if (start > ib.limit()) {
+                    logger.debug("  start=" + start + ", ib.limit()=" + ib.limit());
+                }
+                ib.position(start);
+                ib.get(snippet);
+            }
             result.add(snippet);
         }
 
@@ -411,7 +415,9 @@ class AnnotationForwardIndexReader extends AnnotationForwardIndex {
     }
 
     /**
-     * Gets the length (in tokens) of a document
+     * Gets the length (in tokens) of a document.
+     *
+     * NOTE: this INCLUDES the extra closing token at the end.
      *
      * @param fiid forward index id of a document
      * @return length of the document

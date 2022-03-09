@@ -5,6 +5,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import nl.inl.blacklab.exceptions.InterruptedSearch;
 import nl.inl.blacklab.search.results.SearchResult;
 
 /**
@@ -16,10 +17,17 @@ import nl.inl.blacklab.search.results.SearchResult;
  */
 public class SearchCacheEntryFromFuture<R extends SearchResult> extends SearchCacheEntry<R> {
 
+    private final Search<R> search;
+
     final Future<R> future;
 
-    public SearchCacheEntryFromFuture(Future<R> future) {
+    /** A peek at the future result, or null if not available. */
+    private final R peekValue;
+
+    public SearchCacheEntryFromFuture(Future<R> future, Search<R> search) {
         this.future = future;
+        this.search = search;
+        peekValue = search.peekObject(this);
     }
 
     @Override
@@ -35,6 +43,13 @@ public class SearchCacheEntryFromFuture<R extends SearchResult> extends SearchCa
     @Override
     public R get(long arg0, TimeUnit arg1) throws InterruptedException, ExecutionException, TimeoutException {
         return future.get(arg0, arg1);
+    }
+
+    @Override
+    public R peek() {
+        if (isCancelled())
+            throw new InterruptedSearch();
+        return peekValue;
     }
 
     /**

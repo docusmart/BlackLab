@@ -44,7 +44,6 @@ import nl.inl.blacklab.exceptions.DocumentFormatNotFound;
 import nl.inl.blacklab.exceptions.ErrorOpeningIndex;
 import nl.inl.blacklab.exceptions.MalformedInputFile;
 import nl.inl.blacklab.exceptions.PluginException;
-import nl.inl.blacklab.forwardindex.AnnotationForwardIndex;
 import nl.inl.blacklab.index.DocIndexerFactory.Format;
 import nl.inl.blacklab.index.annotated.AnnotatedFieldWriter;
 import nl.inl.blacklab.index.annotated.AnnotationWriter;
@@ -52,7 +51,6 @@ import nl.inl.blacklab.indexers.config.ConfigInputFormat;
 import nl.inl.blacklab.search.BlackLab;
 import nl.inl.blacklab.search.BlackLabIndexWriter;
 import nl.inl.blacklab.search.ContentAccessor;
-import nl.inl.blacklab.search.indexmetadata.AnnotatedFieldNameUtil;
 import nl.inl.blacklab.search.indexmetadata.Annotation;
 import nl.inl.util.FileProcessor;
 import nl.inl.util.FileUtil;
@@ -119,8 +117,8 @@ class IndexerImpl implements DocWriter, Indexer {
                 return;
 
             listener().fileStarted(documentName);
-            int docsDoneBefore = indexWriter.writer().numDocs();
-            long tokensDoneBefore = listener().getTokensProcessed();
+            int docsDoneBefore = indexer.numberOfDocsDone();
+            long tokensDoneBefore = indexer.numberOfTokensDone();
 
             indexer.index();
             listener().fileDone(documentName);
@@ -128,11 +126,11 @@ class IndexerImpl implements DocWriter, Indexer {
             // FIXME the following checks are broken in multithreaded indexing, as the listener is shared between threads
             // So a docIndexer that didn't index anything can slip through if another thread did index some data in the
             // meantime
-            int docsDoneAfter = indexWriter.writer().numDocs();
+            int docsDoneAfter = indexer.numberOfDocsDone();
             if (docsDoneAfter == docsDoneBefore) {
                 logger.warn("No docs found in " + documentName + "; wrong format?");
             }
-            long tokensDoneAfter = listener().getTokensProcessed();
+            long tokensDoneAfter = indexer.numberOfTokensDone();
             if (tokensDoneAfter == tokensDoneBefore) {
                 logger.warn("No words indexed in " + documentName + "; wrong format?");
             }
@@ -498,12 +496,6 @@ class IndexerImpl implements DocWriter, Indexer {
     }
 
     @Override
-    @Deprecated
-    public boolean isClosed() {
-        return !isOpen();
-    }
-
-    @Override
     public boolean isOpen() {
         return !closed && indexWriter.isOpen();
     }
@@ -524,23 +516,6 @@ class IndexerImpl implements DocWriter, Indexer {
     public void update(Term term, Document document) throws IOException {
         indexWriter.writer().updateDocument(term, document);
         listener().luceneDocumentAdded();
-    }
-
-    /**
-     * Add a list of tokens to an annotation forward index
-     *
-     * @param prop the annotation to get values and position increments from
-     * @return the id assigned to the content
-     * @deprecated add a whole field at a time using {@link #addToForwardIndex(AnnotatedFieldWriter, Document)}
-     */
-    @Override
-    @Deprecated
-    public int addToForwardIndex(AnnotationWriter prop) {
-        Annotation annotation = indexWriter.getOrCreateAnnotation(prop.field(), prop.name());
-        AnnotationForwardIndex forwardIndex = indexWriter.annotationForwardIndex(annotation);
-        if (forwardIndex == null)
-            throw new IllegalArgumentException("No forward index for field " + AnnotatedFieldNameUtil.annotationField(prop.field().name(), prop.name()));
-        return forwardIndex.addDocument(prop.values(), prop.positionIncrements());
     }
 
     @Override
@@ -736,12 +711,6 @@ class IndexerImpl implements DocWriter, Indexer {
             f = this.linkedFileResolver.apply(inputFile);
 
         return f;
-    }
-
-    @Override
-    @Deprecated
-    public void setUseThreads(boolean useThreads) {
-        this.setNumberOfThreadsToUse(useThreads ? 2 : 1);
     }
 
     @Override

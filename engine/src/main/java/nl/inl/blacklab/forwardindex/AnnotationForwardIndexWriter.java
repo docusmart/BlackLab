@@ -79,8 +79,8 @@ class AnnotationForwardIndexWriter extends AnnotationForwardIndex {
     /** Deleted TOC entries. Always sorted by size. */
     List<TocEntry> deletedTocEntries = new ArrayList<>();
 
-    AnnotationForwardIndexWriter(Annotation annotation, File dir, Collators collators, boolean create, boolean largeTermsFileSupport) {
-        super(annotation, dir, collators, largeTermsFileSupport);
+    AnnotationForwardIndexWriter(Annotation annotation, File dir, Collators collators, boolean create) {
+        super(annotation, dir, collators);
 
         if (!dir.exists()) {
             if (!create)
@@ -100,14 +100,13 @@ class AnnotationForwardIndexWriter extends AnnotationForwardIndex {
         try {
             if (tocFile.exists()) {
                 readToc();
-                terms = Terms.openForWriting(collators, termsFile, useBlockBasedTermsFile);
+                terms = Terms.openForWriting(collators, termsFile);
                 tocModified = false;
             } else {
-                terms = Terms.openForWriting(collators, null, true);
+                terms = Terms.openForWriting(collators, null);
                 if (!tokensFile.createNewFile())
                     throw new BlackLabRuntimeException("Could not create file: " + tokensFile);
                 tocModified = true;
-                terms.setBlockBasedFile(useBlockBasedTermsFile);
             }
             // Tricks to speed up reading
             // Index mode. Open for writing.
@@ -544,6 +543,8 @@ class AnnotationForwardIndexWriter extends AnnotationForwardIndex {
 
     /**
      * Gets the length (in tokens) of a document
+     *
+     * NOTE: this INCLUDES the extra closing token at the end.
      *
      * @param fiid forward index id of a document
      * @return length of the document

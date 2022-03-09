@@ -31,6 +31,10 @@ import nl.inl.blacklab.search.results.DocResult;
  * Abstract base class for criteria on which to group DocResult objects.
  * Subclasses implement specific grouping criteria (number of hits, the value of
  * a stored field in the Lucene document, ...)
+ *
+ * This class is thread-safe.
+ * Some DocProperty instances use synchronization for threadsafety, e.g. DocPropertyStoredField,
+ * because they store DocValues instances, which may only be used from one thread at a time.
  */
 public abstract class DocProperty implements ResultProperty<DocResult>, Comparator<DocResult> {
     protected static final Logger logger = LogManager.getLogger(DocProperty.class);
@@ -219,6 +223,11 @@ public abstract class DocProperty implements ResultProperty<DocResult>, Comparat
      */
     public boolean canConstructQuery(BlackLabIndex index, PropertyValue value) {
         return false;
+    }
+
+    @Override
+    public List<DocProperty> props() {
+        return null;
     }
 
 }

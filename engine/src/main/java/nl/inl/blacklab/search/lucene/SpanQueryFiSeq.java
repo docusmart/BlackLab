@@ -94,21 +94,24 @@ public class SpanQueryFiSeq extends BLSpanQueryAbstract {
 
         // Finalize our NFA, so it looks up annotation numbers for its annotation names.
         nfa.finish();
-        nfa.lookupPropertyNumbers(fiAccessor, new IdentityHashMap<NfaState, Boolean>());
+        nfa.lookupAnnotationNumbers(fiAccessor, new IdentityHashMap<NfaState, Boolean>());
 
         BLSpanWeight anchorWeight = clauses.get(0).createWeight(searcher, needsScores);
         Map<Term, TermContext> contexts = needsScores ? getTermContexts(anchorWeight) : null;
-        return new SpanWeightFiSeq(anchorWeight, searcher, contexts);
+        return new SpanWeightFiSeq(anchorWeight, searcher, contexts, !hitsStartPointSorted());
     }
 
     class SpanWeightFiSeq extends BLSpanWeight {
 
         final BLSpanWeight anchorWeight;
 
-        public SpanWeightFiSeq(BLSpanWeight anchorWeight, IndexSearcher searcher, Map<Term, TermContext> terms)
+        private final boolean mustSort;
+
+        public SpanWeightFiSeq(BLSpanWeight anchorWeight, IndexSearcher searcher, Map<Term, TermContext> terms, boolean mustSort)
                 throws IOException {
             super(SpanQueryFiSeq.this, searcher, terms);
             this.anchorWeight = anchorWeight;
+            this.mustSort = mustSort;
         }
 
         @Override
@@ -128,8 +131,14 @@ public class SpanQueryFiSeq extends BLSpanQueryAbstract {
                 return null;
             if (!clauses.get(0).hitsAreUnique())
                 anchorSpans = BLSpans.optSortUniq(anchorSpans, !clauses.get(0).hitsStartPointSorted(), true);
-            return new SpansFiSeq(anchorSpans, startOfAnchor, nfa.getNfa().getStartingState(), direction,
+            BLSpans result = new SpansFiSeq(anchorSpans, startOfAnchor, nfa.getNfa().getStartingState(), direction,
                     fiAccessor.getForwardIndexAccessorLeafReader(context.reader()));
+
+            // Re-sort the results if necessary (if we FI-matched a non-fixed amount to the left)
+            if (mustSort)
+                return BLSpans.ensureStartPointSorted(result);
+
+            return result;
         }
     }
 

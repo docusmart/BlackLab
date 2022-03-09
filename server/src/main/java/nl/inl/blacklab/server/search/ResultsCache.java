@@ -1,26 +1,35 @@
 package nl.inl.blacklab.server.search;
 
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
-import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
 import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.SearchResult;
-import nl.inl.blacklab.searches.CacheInfoDataStream;
 import nl.inl.blacklab.searches.Search;
 import nl.inl.blacklab.searches.SearchCache;
 import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.searches.SearchCacheEntryFromFuture;
 import nl.inl.blacklab.server.config.BLSConfig;
-import nl.inl.blacklab.server.logging.LogDatabase;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
-
-import java.util.concurrent.*;
 
 public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
@@ -88,6 +97,11 @@ public class ResultsCache implements SearchCache {
             return results;
         }
 
+        @Override
+        public T peek() {
+            return results;
+        }
+
     }
 
     private static final class SearchInfoWrapper {
@@ -125,7 +139,7 @@ public class ResultsCache implements SearchCache {
         }
     }
 
-    public ResultsCache(BLSConfig config, ExecutorService threadPool, LogDatabase logDatabase)  {
+    public ResultsCache(BLSConfig config, ExecutorService threadPool)  {
         this.threadPool = threadPool;
 
         CacheLoader<SearchInfoWrapper, SearchResult> cacheLoader = new CacheLoader<SearchInfoWrapper, SearchResult>() {
@@ -136,7 +150,7 @@ public class ResultsCache implements SearchCache {
                 Future<CacheEntryWithResults<? extends SearchResult>> job = runningJobs.computeIfAbsent(searchWrapper.getSearch(), (search) -> ResultsCache.this.threadPool.submit(() -> {
                     ThreadContext.put("requestId", requestId);
                     final long startTime = System.currentTimeMillis();
-                    SearchResult results = search.executeInternal();
+                    SearchResult results = search.executeInternal(null);
                     ThreadContext.remove("requestId");
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);
                 }));
@@ -161,7 +175,7 @@ public class ResultsCache implements SearchCache {
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
         try {
             CompletableFuture<SearchResult> resultsFuture = searchCache.get(new SearchInfoWrapper(search, ThreadContext.get("requestId")));
-            return new SearchCacheEntryFromFuture(resultsFuture);
+            return new SearchCacheEntryFromFuture(resultsFuture, search);
         } catch (Exception ex) {
             throw BlackLabRuntimeException.wrap(ex);
         }
@@ -194,14 +208,12 @@ public class ResultsCache implements SearchCache {
     }
 
     @Override
-    public void getCacheStatus(CacheInfoDataStream dataStream) {
-        dataStream.startMap();
-        dataStream.endMap();
-        //Noop
+    public Map<String, Object> getCacheStatus() {
+        return null;
     }
 
     @Override
-    public void getCacheContent(CacheInfoDataStream dataStream, boolean includeDebugInfo) {
-        //Noop
+    public List<Map<String, Object>> getCacheContent(boolean includeDebugInfo) {
+        return null;
     }
 }

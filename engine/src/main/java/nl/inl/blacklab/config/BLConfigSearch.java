@@ -14,7 +14,7 @@ public class BLConfigSearch {
     
     int maxHitsToCount = 10_000_000;
     
-    long fiMatchFactor = ClauseCombinerNfa.DEFAULT_NFA_THRESHOLD;
+    long fiMatchFactor = ClauseCombinerNfa.defaultForwardIndexMatchingThreshold;
 
     public BLConfigCollator getCollator() {
         return collator;
@@ -56,6 +56,11 @@ public class BLConfigSearch {
         this.fiMatchFactor = fiMatchFactor;
     }
 
+    /**
+     * Apply the search configuration settings to an opened index.
+     *
+     * @param index index to apply the configuration to
+     */
     public void apply(BlackLabIndex index) {
         index.setCollator(getCollator().get());
         index.setDefaultContextSize(ContextSize.get(getContextSize()));
@@ -63,6 +68,7 @@ public class BLConfigSearch {
         int maxHitsToCount = getMaxHitsToCount();
         long fiMatchFactor = getFiMatchFactor();
         SearchSettings sett = SearchSettings.get(maxHitsToProcess, maxHitsToCount, fiMatchFactor);
+        ClauseCombinerNfa.setDefaultForwardIndexMatchingThreshold(fiMatchFactor);
         index.setSearchSettings(sett);
     }
 }

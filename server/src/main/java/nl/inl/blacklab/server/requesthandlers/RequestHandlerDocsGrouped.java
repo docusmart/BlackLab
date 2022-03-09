@@ -14,14 +14,13 @@ import nl.inl.blacklab.search.results.CorpusSize;
 import nl.inl.blacklab.search.results.DocGroup;
 import nl.inl.blacklab.search.results.DocGroups;
 import nl.inl.blacklab.search.results.DocResults;
-import nl.inl.blacklab.search.results.ResultCount;
+import nl.inl.blacklab.search.results.ResultsStats;
 import nl.inl.blacklab.search.results.WindowStats;
 import nl.inl.blacklab.searches.SearchCacheEntry;
 import nl.inl.blacklab.server.BlackLabServer;
 import nl.inl.blacklab.server.datastream.DataStream;
 import nl.inl.blacklab.server.exceptions.BlsException;
 import nl.inl.blacklab.server.jobs.User;
-
 /**
  * Request handler for grouped doc results.
  */
@@ -35,9 +34,9 @@ public class RequestHandlerDocsGrouped extends RequestHandler {
     public int handle(DataStream ds) throws BlsException, InvalidQuery {
 
         // Make sure we have the hits search, so we can later determine totals.
-        SearchCacheEntry<ResultCount> originalHitsSearch = null;
+        SearchCacheEntry<ResultsStats> originalHitsSearch = null;
         if (searchParam.hasPattern()) {
-            originalHitsSearch = searchParam.hitsCount().executeAsync();
+            originalHitsSearch = searchParam.hitsSample().hitCount().executeAsync();
         }
         // Get the window we're interested in
         DocResults docResults = searchParam.docs().execute();
@@ -67,13 +66,9 @@ public class RequestHandlerDocsGrouped extends RequestHandler {
         // The summary
         ds.startEntry("summary").startMap();
         WindowStats ourWindow = new WindowStats(first + number < groups.size(), first, number, numberOfGroupsInWindow);
-        ResultCount totalHits;
-        try {
-            totalHits = originalHitsSearch == null ? null : originalHitsSearch.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw RequestHandler.translateSearchException(e);
-        }
-        ResultCount docsStats = searchParam.docsCount().execute();
+        ResultsStats hitsStats, docsStats;
+        hitsStats = originalHitsSearch == null ? null : originalHitsSearch.peek();
+        docsStats = searchParam.docsCount().executeAsync().peek();
 
         // The list of groups found
         DocProperty metadataGroupProperties = null;
@@ -87,13 +82,12 @@ public class RequestHandlerDocsGrouped extends RequestHandler {
         }
 
         addSummaryCommonFields(ds, searchParam, groupSearch.timeUserWaitedMs(), 0, groups, ourWindow);
-        if (totalHits == null)
+        if (hitsStats == null)
             addNumberOfResultsSummaryDocResults(ds, false, docResults, false, subcorpusSize);
         else
-            addNumberOfResultsSummaryTotalHits(ds, totalHits, docsStats, false, subcorpusSize);
+            addNumberOfResultsSummaryTotalHits(ds, hitsStats, docsStats, true, false, subcorpusSize);
 
         ds.endMap().endEntry();
-        searchLogger.setResultsFound(groups.size());
 
         /* Gather group values per property:
          * In the case we're grouping by multiple values, the DocPropertyMultiple and PropertyValueMultiple will

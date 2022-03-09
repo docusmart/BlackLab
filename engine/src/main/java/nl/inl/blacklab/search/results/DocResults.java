@@ -45,11 +45,14 @@ import nl.inl.blacklab.resultproperty.HitPropertyDoc;
 import nl.inl.blacklab.resultproperty.PropertyValue;
 import nl.inl.blacklab.resultproperty.PropertyValueDoc;
 import nl.inl.blacklab.resultproperty.PropertyValueInt;
+import nl.inl.blacklab.search.BlackLabIndex;
 import nl.inl.blacklab.search.results.Hits.EphemeralHit;
 import nl.inl.blacklab.search.results.Hits.HitsArrays;
 
 /**
  * A list of DocResult objects (document-level query results).
+ *
+ * This class is thread-safe.
  */
 public class DocResults extends ResultsList<DocResult, DocProperty> implements ResultGroups<Hit> {
 
@@ -391,7 +394,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                 group.add(r);
             Integer groupSize = groupSizes.get(groupId);
             Long groupTokenSize = groupTokenSizes.get(groupId);
-            long docLengthTokens = fieldLengthProp.get(r.identity().id());
+            long docLengthTokens = fieldLengthProp.get(r.identity().id()) - BlackLabIndex.IGNORE_EXTRA_CLOSING_TOKEN;
             if (groupSize == null) {
                 groupSize = 1;
                 groupTokenSize = docLengthTokens;
@@ -513,20 +516,6 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
     }
 
     /**
-     * Count total number of tokens in matching documents.
-     *
-     * This is fast if the query was created from a Query object (and the index contains DocValues),
-     * but slower if it was created from Hits or a list of DocResult objects.
-     *
-     * @return total number of tokens in matching documents.
-     * @deprecated use subcorpusSize().getTokens()
-     */
-    @Deprecated
-    public long tokensInMatchingDocs() {
-        return subcorpusSize().getTokens();
-    }
-
-    /**
      * Determine the size of the subcorpus defined by this set of documents.
      *
      * Counts number of documents and tokens.
@@ -562,7 +551,6 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                     numberOfTokens = countTokens ? 0 : -1;
                     numberOfDocuments = 0;
                     Weight weight = queryInfo().index().searcher().createNormalizedWeight(query, false);
-                    int subtractClosingToken = 1; // the count is always 1 too high because of the "extra closing token" (position for closing tags)
                     for (LeafReaderContext r: queryInfo().index().reader().leaves()) {
                         Scorer scorer = weight.scorer(r);
                         if (scorer != null) {
@@ -574,7 +562,7 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                                     break;
                                 numberOfDocuments++;
                                 if (countTokens)
-                                    numberOfTokens += tokenLengthValues.get(docId) - subtractClosingToken;
+                                    numberOfTokens += tokenLengthValues.get(docId) - BlackLabIndex.IGNORE_EXTRA_CLOSING_TOKEN;
                             }
                         }
                     }

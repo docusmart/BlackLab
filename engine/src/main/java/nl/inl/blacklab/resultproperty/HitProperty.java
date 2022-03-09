@@ -335,6 +335,11 @@ public abstract class HitProperty implements ResultProperty<Hit>, IntComparator 
         return true;
     }
 
+    @Override
+    public List<HitProperty> props() {
+        return null;
+    }
+
     /**
      * Return only the DocProperty portion (if any) of this HitProperty, if any.
      * 
@@ -342,6 +347,8 @@ public abstract class HitProperty implements ResultProperty<Hit>, IntComparator 
      * return the latter as a DocPropertyStoredField.
      * 
      * This is used for calculating the relative frequency when grouping on a metadata field.
+     *
+     * It is also used in HitGroupsTokenFrequencies to speed up large frequency list requests.
      * 
      * @return metadata portion of this property, or null if there is none
      */

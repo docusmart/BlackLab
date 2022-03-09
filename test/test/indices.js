@@ -125,6 +125,15 @@ async function toJson(xml) {
     return parseXmlString(xml);
 }
 
+function writeToOutput(obj, outPath=null) {
+    var strObj = JSON.stringify(obj, null, space=2);
+    if (outPath === null) {
+        console.log(strObj);
+        return;
+    }
+    fs.writeFileSync(outPath, strObj);
+}
+
 function queryIndex(indexName, pattern, filters, format = 'application/json') {
     indexUrl = constants.BLACKLAB_USER + ":" + indexName + "/hits";
     var respFormat = format === "" ? "application/json" : format;

@@ -29,8 +29,17 @@ import nl.inl.blacklab.search.lucene.BLSpanQuery;
 import nl.inl.util.Sort;
 import nl.inl.util.Sort.Sortable;
 
+/**
+ * A collection of matches.
+ *
+ * Mostly thread-safe. Deprecated method sortInPlace() is not and
+ * should be avoided.
+ */
 public abstract class Hits extends Results<Hit, HitProperty> {
 
+    /** A mutable implementation of Hit, to be used for short-lived
+     *  instances used while e.g. iterating through a list of hits.
+     */
     public static class EphemeralHit implements Hit {
         public int doc = -1;
         public int start = -1;
@@ -329,7 +338,10 @@ public abstract class Hits extends Results<Hit, HitProperty> {
          * Note this will be less efficient than regular sort(), because this avoids allocating copies of internal data, thus needing more swaps.
          * In order to do that, more swaps and pointer chases are required (in practice, 0.5n pointer chases of average length log2(n), and 0.5n
          * swaps)
+         *
+         * @deprecated unused and not threadsafe
          */
+        @Deprecated
         public void sortInPlace(HitProperty p) {
             this.lock.writeLock().lock();
 
@@ -573,7 +585,9 @@ public abstract class Hits extends Results<Hit, HitProperty> {
     /** Construct an empty, mutable Hits object.
      *
      * @param queryInfo query info for corresponding query
-     * @deprecated if you need an empty Hits object, use {@link #Hits(QueryInfo, boolean)}; otherwise, use {@link #Hits(QueryInfo, HitsArrays)}
+     * @deprecated if you need an empty Hits object, use either
+     *     {@link #immutableEmptyList(QueryInfo)} or {@link #mutableEmptyList(QueryInfo)};
+     *     otherwise, use {@link #Hits(QueryInfo, HitsArrays)}
      */
     @Deprecated
     public Hits(QueryInfo queryInfo) {
@@ -785,7 +799,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     protected int resultsProcessedTotal() {
-        ensureResultsRead(-1);
+        ensureAllResultsRead();
         return this.getHitsArrays().size();
     }
 
@@ -824,6 +838,7 @@ public abstract class Hits extends Results<Hit, HitProperty> {
 
     @Override
     public Hit get(int i) {
+        ensureResultsRead(i + 1);
         return this.getHitsArrays().get(i);
     }
 

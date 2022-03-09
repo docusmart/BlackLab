@@ -18,12 +18,14 @@ import nl.inl.util.VersionFile;
 public abstract class AnnotationForwardIndex {
 
     /*
-     * File format version history:
+     * Supported versions:
+     * 4. Large terms file support
+     * 5. New collators
+     *
+     * Older versions, no longer supported:
      * 1. Initial version.
      * 2. Added sort index to terms file.
      * 3. New terms and docs file format; added reverse sort index and case-insensitive index to terms file.
-     * 4. Large terms file support
-     * 5. New collators
      */
 
     /**
@@ -103,12 +105,8 @@ public abstract class AnnotationForwardIndex {
             if (!VersionFile.isTypeVersion(dir, "fi", CURRENT_VERSION)) {
                 if (VersionFile.isTypeVersion(dir, "fi", "4")) {
                     version = "4";
-                } else if (VersionFile.isTypeVersion(dir, "fi", "3")) {
-                    version = "3";
-                } else if (VersionFile.isTypeVersion(dir, "fi", "2")) {
-                    version = "2";
                 } else {
-                    throw new IllegalArgumentException("Not a forward index or wrong version: "
+                    throw new IllegalArgumentException("Not a forward index or unsupported version: "
                             + VersionFile.report(dir) + " (fi " + CURRENT_VERSION + " expected)");
                 }
             }
@@ -118,29 +116,23 @@ public abstract class AnnotationForwardIndex {
         }
     
         AnnotationForwardIndex fi;
-        boolean largeTermsFileSupport = true;
         CollatorVersion collVersion = CollatorVersion.V2;
         switch (version) {
-        case "2":
-            throw new UnsupportedOperationException(
-                    "Forward index version (2) too old for this BlackLab version. Please re-index.");
-        case "3":
-            largeTermsFileSupport = false;
-            collVersion = CollatorVersion.V1;
-            break;
         case "4":
+            // Large terms file, old collators
             collVersion = CollatorVersion.V1;
             break;
         case "5":
+            // Large terms file, new collators
             break;
         }
         Collators collators = new Collators(collator, collVersion);
         if (indexMode)
-            fi = new AnnotationForwardIndexWriter(annotation, dir, collators, create, largeTermsFileSupport);
+            fi = new AnnotationForwardIndexWriter(annotation, dir, collators, create);
         else {
             if (create)
                 throw new UnsupportedOperationException("create == true, but not in index mode!");
-            fi = new AnnotationForwardIndexReader(annotation, dir, collators, largeTermsFileSupport, buildTermIndexesOnInit);
+            fi = new AnnotationForwardIndexReader(annotation, dir, collators, buildTermIndexesOnInit);
         }
         return fi;
     }
@@ -169,12 +161,6 @@ public abstract class AnnotationForwardIndex {
     long tokenFileEndPosition = 0;
 
     /**
-     * If true, we use the new, block-based terms file, that can grow larger than 2
-     * GB.
-     */
-    boolean useBlockBasedTermsFile = true;
-
-    /**
      * If true, our Terms can be used for NFA matching (Collator is consistent with
      * other comparisons)
      */
@@ -186,15 +172,13 @@ public abstract class AnnotationForwardIndex {
     /** Has the tokens file been mapped? */
     protected boolean initialized = false;
 
-    public AnnotationForwardIndex(Annotation annotation, File dir, Collators collators, boolean largeTermsFileSupport) {
+    public AnnotationForwardIndex(Annotation annotation, File dir, Collators collators) {
         this.annotation = annotation;
         canDoNfaMatching = collators == null ? false : collators.version() != CollatorVersion.V1;
 
         termsFile = new File(dir, "terms.dat");
         tocFile = new File(dir, "docs.dat");
         tokensFile = new File(dir, "tokens.dat");
-        
-        setLargeTermsFileSupport(largeTermsFileSupport);
     }
     
     public void initialize() {
@@ -268,6 +252,16 @@ public abstract class AnnotationForwardIndex {
     public abstract List<int[]> retrievePartsInt(int fiid, int[] start, int[] end);
 
     /**
+     * Retrieve token ids for the entire document.
+     * @param fiid forward index id
+     * @return token ids for the entire document.
+     */
+    public int[] getDocument(int fiid) {
+        int[] fullDoc = new int[] { -1 };
+        return retrievePartsInt(fiid, fullDoc, fullDoc).get(0);
+    }
+
+    /**
      * Get the Terms object in order to translate ids to token strings
      * 
      * @return the Terms object
@@ -304,16 +298,14 @@ public abstract class AnnotationForwardIndex {
     }
 
     /**
-     * Gets the length (in tokens) of a document
+     * Gets the length (in tokens) of a document.
+     *
+     * NOTE: this INCLUDES the extra closing token at the end of the document!
      * 
      * @param fiid forward index id of a document
      * @return length of the document
      */
     public abstract int docLength(int fiid);
-
-    protected void setLargeTermsFileSupport(boolean b) {
-        this.useBlockBasedTermsFile = b;
-    }
 
     /**
      * Perform a task on each document in the forward index.
@@ -324,8 +316,7 @@ public abstract class AnnotationForwardIndex {
         if (!initialized)
             initialize();
         for (Integer fiid: idSet()) {
-            int[] tokenIds = retrievePartsInt(fiid, new int[] { -1 }, new int[] { -1 }).get(0);
-            task.perform(fiid, tokenIds);
+            task.perform(fiid, getDocument(fiid));
         }
     }
 

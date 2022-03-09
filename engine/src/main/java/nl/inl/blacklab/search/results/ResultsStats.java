@@ -1,6 +1,51 @@
 package nl.inl.blacklab.search.results;
 
-public abstract class ResultsStats {
+import java.util.Collections;
+import java.util.Map;
+
+public abstract class ResultsStats implements SearchResult {
+
+    public static final ResultsStats SEARCH_NOT_STARTED_YET = new ResultsStats() {
+        @Override
+        public boolean processedAtLeast(int lowerBound) {
+            return false;
+        }
+
+        @Override
+        public int processedTotal() {
+            throw new RuntimeException("cannot access total, search not started");
+        }
+
+        @Override
+        public int processedSoFar() {
+            return 0;
+        }
+
+        @Override
+        public int countedSoFar() {
+            return 0;
+        }
+
+        @Override
+        public int countedTotal() {
+            throw new RuntimeException("cannot access total, search not started");
+        }
+
+        @Override
+        public boolean done() {
+            return false;
+        }
+
+        @Override
+        public MaxStats maxStats() {
+            return MaxStats.NOT_EXCEEDED;
+        }
+
+        @Override
+        public String toString() {
+            return "ResultsStats.SEARCH_NOT_STARTED_YET";
+        }
+    };
 
     public abstract boolean processedAtLeast(int lowerBound);
 
@@ -68,4 +113,20 @@ public abstract class ResultsStats {
     @Override
     public abstract String toString();
 
+    /**
+     * How many result objects are stored here?
+     * @return
+     */
+    @Override
+    public int numberOfResultObjects() {
+        return 1;
+    }
+
+    /**
+     * Return debug info.
+     */
+    @Override
+    public Map<String, Object> getDebugInfo() {
+        return Collections.emptyMap();
+    }
 }

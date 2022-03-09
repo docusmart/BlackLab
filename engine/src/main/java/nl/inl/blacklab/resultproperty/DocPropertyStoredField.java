@@ -50,6 +50,10 @@ import nl.inl.util.StringUtil;
  * For grouping DocResult objects by the value of a stored field in the Lucene
  * documents. The field name is given when instantiating this class, and might
  * be "author", "year", and such.
+ *
+ * This class is thread-safe.
+ * (using synchronization on DocValues instance; DocValues are stored for each LeafReader,
+ *  and each of those should only be used from one thread at a time)
  */
 public class DocPropertyStoredField extends DocProperty {
     //private static final Logger logger = LogManager.getLogger(DocPropertyStoredField.class);
@@ -142,13 +146,17 @@ public class DocPropertyStoredField extends DocProperty {
                     SortedDocValues a = targetDocValues.getLeft();
                     SortedSetDocValues b = targetDocValues.getRight();
                     if (a != null) { // old index, only one value
-                        BytesRef val = a.get(docId - targetDocBase);
-                        ret.add(new String(val.bytes, val.offset, val.length, StandardCharsets.UTF_8));
-                    } else { // newer index, (possibly) multiple values.
-                        b.setDocument(docId - targetDocBase);
-                        for (long ord = b.nextOrd(); ord != SortedSetDocValues.NO_MORE_ORDS; ord = b.nextOrd()) {
-                            BytesRef val = b.lookupOrd(ord);
+                        synchronized (a) { // SortedDocValues is not thread-safe
+                            BytesRef val = a.get(docId - targetDocBase);
                             ret.add(new String(val.bytes, val.offset, val.length, StandardCharsets.UTF_8));
+                        }
+                    } else { // newer index, (possibly) multiple values.
+                        synchronized (b) { // SortedSetDocValues is not thread-safe
+                            b.setDocument(docId - targetDocBase);
+                            for (long ord = b.nextOrd(); ord != SortedSetDocValues.NO_MORE_ORDS; ord = b.nextOrd()) {
+                                BytesRef val = b.lookupOrd(ord);
+                                ret.add(new String(val.bytes, val.offset, val.length, StandardCharsets.UTF_8));
+                            }
                         }
                     }
                 }
@@ -169,7 +177,9 @@ public class DocPropertyStoredField extends DocProperty {
                 final Integer targetDocBase = target.getKey();
                 final NumericDocValues targetDocValues = target.getValue();
                 if (targetDocValues != null) {
-                    ret.add(Long.toString(targetDocValues.get(docId - targetDocBase)));
+                    synchronized (targetDocValues) {
+                        ret.add(Long.toString(targetDocValues.get(docId - targetDocBase)));
+                    }
                 }
                 // If no docvalues for this segment - no values were indexed for this field (in this segment).
                 // So returning the empty array is good.
@@ -189,8 +199,8 @@ public class DocPropertyStoredField extends DocProperty {
      * Get the raw values straight from lucene.
      * The returned array is in whichever order the values were originally added to the document.
      *
-     * @param docId
-     * @return
+     * @param doc a Lucene doc value that we can get metadata values from
+     * @return metadata value(s)
      */
     public String[] get(PropertyValueDoc doc) {
         // We have the Document already, get the property from there

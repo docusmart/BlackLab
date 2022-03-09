@@ -1,10 +1,14 @@
 package nl.inl.blacklab.searches;
 
+import java.util.concurrent.Future;
+
 import nl.inl.blacklab.exceptions.InvalidQuery;
 import nl.inl.blacklab.search.results.QueryInfo;
 import nl.inl.blacklab.search.results.ResultCount;
 import nl.inl.blacklab.search.results.ResultCount.CountType;
 import nl.inl.blacklab.search.results.Results;
+import nl.inl.blacklab.search.results.ResultsStats;
+import nl.inl.blacklab.search.results.ResultsStatsDelegate;
 
 /**
  * A search operation that yields a count as its result.
@@ -12,27 +16,53 @@ import nl.inl.blacklab.search.results.Results;
  */
 public class SearchCountFromResults<T extends Results<?, ?>> extends SearchCount {
 
-    private SearchResults<T> source;
-    private CountType type;
+    /**
+     * The search we're doing a count for.
+     */
+    private final SearchForResults<T> source;
 
-    public SearchCountFromResults(QueryInfo queryInfo, SearchResults<T> source, CountType type) {
+    /**
+     * Type of count we want (number of hits or docs).
+     */
+    private final CountType type;
+
+    public SearchCountFromResults(QueryInfo queryInfo, SearchForResults<T> source, CountType type) {
         super(queryInfo);
         this.source = source;
         this.type = type;
     }
 
     @Override
-    public ResultCount executeInternal() throws InvalidQuery {
-        ResultCount resultCount = new ResultCount(source.executeNoQueue(), type);
+    public ResultsStats executeInternal(Peekable<ResultsStats> progressReporter) throws InvalidQuery {
+        // Start the search and construct the count object
+        ResultsStats resultCount = new ResultCount(source.executeNoQueue(), type);
+        if (progressReporter != null && progressReporter.peek() != null)
+            ((ResultsStatsDelegate) progressReporter.peek()).setRealStats(resultCount);
 
-        // Ensure that the all hits will be counted in a separate thread.
-        // (Why a separate thread? Because SearchCountFromResults immediately returns its
-        //  result object, and the caller can monitor this object to see the running total
-        //  while it is being counted)
-        SearchCountTotal<Results<?, ?>> searchCountTotal = new SearchCountTotal<>(queryInfo(), resultCount);
-        searchCountTotal.executeAsyncNoQueue();
+        // Gather all the hits.
+        // This runs synchronously, so SearchCountFromResults will not be finished until
+        // the entire count it finished. You can peek at the running count in the meantime,
+        // however.
+        resultCount.processedTotal();
 
         return resultCount;
+    }
+
+    /**
+     * Return the peek object, given a cache entry.
+     *
+     * This object will be returned when SearchCacheEntry.peek() is called while
+     * the search is executing. Here we return a ResultsStatsDelegate object that will return 0
+     * while there's no real count available yet, but will return the real count once
+     * it's available.
+     *
+     * @param future future result object
+     * @return peek object, or null if not supported for this operation
+     */
+    public ResultsStatsDelegate peekObject(Future<ResultsStats> future) {
+        // Create a temporary stats object that will return 0 until it receives the
+        // real object and will delegate to that.
+        return new ResultsStatsDelegate(future);
     }
 
     @Override
@@ -66,7 +96,7 @@ public class SearchCountFromResults<T extends Results<?, ?>> extends SearchCount
 
     @Override
     public String toString() {
-        return toString("count", source, type);
+        return toString("countfromresults", source, type);
     }
 
 }
