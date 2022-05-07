@@ -5,11 +5,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.micrometer.core.instrument.Counter;
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,6 +38,7 @@ public class ResultsCache implements SearchCache {
     private static final Logger logger = LogManager.getLogger(ResultsCache.class);
     private static final String CACHE_NAME_FOR_METRICS = "blacklab-results-cache";
     private final ExecutorService threadPool;
+    private final Counter timedOutJobs = Metrics.globalRegistry.counter("timedout-search-jobs", Tags.empty());
     private final AsyncLoadingCache<SearchInfoWrapper, SearchResult> searchCache;
     private final ConcurrentHashMap<Search<? extends SearchResult>, Future<CacheEntryWithResults<? extends SearchResult>>> runningJobs = new ConcurrentHashMap<>();
 
@@ -141,6 +145,7 @@ public class ResultsCache implements SearchCache {
 
     public ResultsCache(BLSConfig config, ExecutorService threadPool)  {
         this.threadPool = threadPool;
+        int maxSearchTime = config.getCache().getMaxSearchTimeSec();
 
         CacheLoader<SearchInfoWrapper, SearchResult> cacheLoader = new CacheLoader<SearchInfoWrapper, SearchResult>() {
             @Override
@@ -155,9 +160,18 @@ public class ResultsCache implements SearchCache {
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);
                 }));
                 try {
-                    CacheEntryWithResults<? extends SearchResult> searchResult = job.get();
+                    CacheEntryWithResults<? extends SearchResult> searchResult;
+                    if (maxSearchTime > 0) {
+                         searchResult = job.get(maxSearchTime * 1000, TimeUnit.MILLISECONDS);
+                    } else {
+                         searchResult = job.get();
+                    }
                     logger.warn("Internal search time is: {}", searchResult.timeUserWaitedMs());
                     return searchResult.getResults();
+                } catch (TimeoutException ex) {
+                    logger.warn("Search took to long: {}", searchWrapper.search);
+                    timedOutJobs.increment();
+                    throw ex;
                 } finally {
                     runningJobs.remove(searchWrapper.getSearch());
                 }
@@ -165,11 +179,13 @@ public class ResultsCache implements SearchCache {
         };
 
         int maxSize = config.getCache().getMaxNumberOfJobs();
-        logger.info("Creating cache with maxSize:{}", maxSize);
+        logger.info("Creating cache with maxSize: {}", maxSize);
+        logger.info("Creating cache with max search time: {} sec", maxSearchTime);
         searchCache = Caffeine.newBuilder()
             .recordStats()
             .maximumSize(maxSize)
             .initialCapacity(maxSize / 10)
+            .executor(this.threadPool)
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
         Metrics.globalRegistry.gaugeMapSize("blacklab-job-queue", Tags.empty(), runningJobs);
