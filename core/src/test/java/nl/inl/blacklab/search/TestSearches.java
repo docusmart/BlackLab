@@ -3,6 +3,11 @@ package nl.inl.blacklab.search;
 import java.util.Arrays;
 import java.util.List;
 
+import nl.inl.blacklab.search.results.Concordances;
+import nl.inl.blacklab.search.results.ContextSize;
+import nl.inl.blacklab.search.results.Hit;
+import nl.inl.blacklab.search.results.Kwics;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.TermQuery;
 import org.junit.AfterClass;
@@ -24,6 +29,7 @@ import nl.inl.blacklab.search.lucene.BLSpanTermQuery;
 import nl.inl.blacklab.search.lucene.SpanQueryFiltered;
 import nl.inl.blacklab.search.results.Hits;
 import nl.inl.blacklab.testutil.TestIndex;
+
 
 public class TestSearches {
 
@@ -415,7 +421,6 @@ public class TestSearches {
         // there used to be an issue with determining doc length that messed this up
         Assert.assertEquals(expected, testIndex.findConc("'noot'+ [word != 'noot']+ group:('aap')+", prop, value));
     }
-
     // Backreferences not implemented yet
     @Ignore
     @Test
@@ -434,6 +439,23 @@ public class TestSearches {
         Assert.assertEquals(1, group.length);
         Assert.assertEquals(2, group[0].start());
         Assert.assertEquals(3, group[0].end());
+    }
+    @Test
+    public void testCaptGroup() {
+        String pattern = "'The' cg_1:([word != 'slow']) 'brown' (cg_2:'blah')?";
+        Annotation word = testIndex.index().mainAnnotatedField().annotation("word");
+        Hits hits = testIndex.find(pattern);
+        Concordances cts = new Concordances(hits, ConcordanceType.CONTENT_STORE, ContextSize.get(0));
+        Hit hit = hits.get(0);
+        Concordance concordance = cts.get(hit);
+        Span[] spans = hits.capturedGroups().get(hit, true);
+        String match = concordance.partsNoXml()[1]; // get the match string
+        String[] words = match.split(" "); //shortcut split by space, simulates the <w> elements
+        for (Span span : spans) {
+            Assert.assertNotNull(span);
+            Assert.assertTrue(span.start() < words.length);
+            Assert.assertTrue(span.end() <= words.length);
+        }
     }
 
 }
