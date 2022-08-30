@@ -101,6 +101,9 @@ public class CapturedGroupsImpl implements CapturedGroups {
      *
      * Relatively slow. If you care about performance, prefer {@link #get(Hit)}.
      *
+     * Please note that if a group was not matched, its key will be in the map,
+     * but the associated value will be null.
+     *
      * @param hit hit to get groups for
      * @return groups
      */
@@ -114,8 +117,9 @@ public class CapturedGroupsImpl implements CapturedGroups {
             return null;
         Map<String, Span> result = new TreeMap<>(); // TreeMap to maintain group ordering
         for (int i = 0; i < names.size(); i++) {
-            if (groups[i] != null && (!omitEmpty || groups[i].length() > 0))
+            if (!omitEmpty || (groups[i] != null && groups[i].length() > 0)) {
                 result.put(names.get(i), groups[i]);
+            }
         }
         return result;
     }
