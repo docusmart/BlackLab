@@ -1042,6 +1042,7 @@ public abstract class RequestHandler {
                             .startEntry("right").contextList(c.annotations(), annotationsToList, c.right()).endEntry();
                 } else {
                     ds.startEntry("match").contextList(c.annotations(), annotationsToList, c.match()).endEntry();
+                    //ds.startEntry("match").plain(c.toConcordance().match()).endEntry();
                 }
             }
             ds.endMap().endItem();

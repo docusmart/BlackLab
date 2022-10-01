@@ -30,6 +30,8 @@ import java.nio.charset.CharsetDecoder;
 import java.util.Arrays;
 import java.util.zip.Deflater;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.eclipse.collections.api.iterator.IntIterator;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
@@ -51,7 +53,7 @@ import nl.inl.util.SimpleResourcePool;
  */
 @NotThreadSafe // in index mode
 public class ContentStoreFixedBlockWriter extends ContentStoreFixedBlock {
-    //private static final Logger logger = LogManager.getLogger(ContentStoreDirFixedBlock.class);
+    private static final Logger logger = LogManager.getLogger(ContentStoreFixedBlockWriter.class);
 
     /** Name of the version file */
     private static final String VERSION_FILE_NAME = "version.dat";
@@ -478,6 +480,12 @@ public class ContentStoreFixedBlockWriter extends ContentStoreFixedBlock {
     @Override
     public synchronized void delete(int id) {
         TocEntry e = toc.get(id);
+        if (e == null) {
+            logger.debug("Could not find table of contents for doc with index " + id);
+            System.out.println("Could not find table of contents for doc with index " + id);
+            return;
+        }
+
         e.deleted = true;
         for (int bl : e.blockIndices) {
             freeBlocks.add(bl);

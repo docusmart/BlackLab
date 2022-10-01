@@ -17,13 +17,28 @@ package nl.inl.blacklab.contentstore;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import nl.inl.blacklab.search.BlackLab;
+import nl.inl.blacklab.search.BlackLabIndexWriter;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.NoLockFactory;
+import org.apache.lucene.store.SimpleFSDirectory;
+import org.eclipse.collections.api.block.procedure.Procedure;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -230,5 +245,71 @@ public class TestContentStoreDirFixedBlock {
     @Test
     public void testCloseReopenAppend() {
         Assert.assertEquals(5, store.store("test"));
+    }
+
+    @Test
+    public void testpeerIntoFile() throws ErrorOpeningIndex, IOException, InterruptedException {
+        String newdir =  "/Users/estebanginez/src/blacklab-config/data/user-index/docuser_b7485ea3c98f6cb5b340f2abb697da2f/8bd8a52e-dc77-4149-a305-0aab8aadbee3_B1BC/cs_contents";
+        String newIndexDir =  "/Users/estebanginez/src/blacklab-config/data/user-index/docuser_b7485ea3c98f6cb5b340f2abb697da2f/8bd8a52e-dc77-4149-a305-0aab8aadbee3_B1BC";
+        String dir =  "/Users/estebanginez/src/blacklab-config/data/user-index/docuser_b7485ea3c98f6cb5b340f2abb697da2f/8bd8a52e-dc77-4149-a305-0aab8aadbee3_3902/cs_contents";
+        String indexDir =  "/Users/estebanginez/src/blacklab-config/data/user-index/docuser_b7485ea3c98f6cb5b340f2abb697da2f/8bd8a52e-dc77-4149-a305-0aab8aadbee3_3902";
+
+
+        countItemsInToc(newdir);
+        countItemsInToc(dir);
+
+        findDoc(indexDir, dir);
+        findDoc(newIndexDir, newdir);
+
+    }
+
+    public void findDoc(String indexDir, String dir) throws IOException, ErrorOpeningIndex {
+        System.out.println("For dir: " + indexDir);
+        SimpleFSDirectory simpleDir = new SimpleFSDirectory(Paths.get(indexDir));
+        ContentStoreFixedBlockReader reader = new ContentStoreFixedBlockReader(new File(dir));
+        try (IndexReader freshReader = DirectoryReader.open(simpleDir )) {
+            int notFoundId = 1425283;
+            notFoundId = 1425017;
+            Document d = freshReader.document(notFoundId);
+            System.out.println("section id: " + d.getField("sectionId").stringValue());
+            String contentIdStr = d.get("contents#cid");
+            if (contentIdStr == null)
+                throw new BlackLabRuntimeException("Lucene document has no content id: " + d);
+            System.out.println(contentIdStr);
+            int docId = Integer.parseInt(contentIdStr);
+            ContentStoreFixedBlock.TocEntry tocEntry = reader.toc.get(docId);
+            System.out.println(tocEntry);
+        }
+    }
+    public ContentStoreFixedBlockReader countItemsInToc(String dir) throws ErrorOpeningIndex {
+        System.out.println("For dir: " + dir);
+        ContentStoreFixedBlockReader reader = new ContentStoreFixedBlockReader(new File(dir));
+        reader.readToc();
+        long deleted = 0;
+        long all = 0;
+        for (ContentStoreFixedBlock.TocEntry next : reader.toc) {
+            if (next.deleted) {
+                deleted++;
+            }
+            all++;
+        }
+        System.out.println("Deleted: " + deleted);
+        System.out.println("All: " + all);
+        return reader;
+    }
+    public void doDelete(String indexDir) throws ErrorOpeningIndex, InterruptedException {
+        BlackLabIndexWriter iWriter = BlackLab.openForWriting(new File(indexDir), false);
+        TermQuery q = new TermQuery(new Term("docId", "0f7c5190-43e4-4fe1-a07d-af2b72370fb0"));
+        int i = 0;
+        while (i < 1) {
+            try {
+                iWriter.delete(q);
+            } catch (Exception e) {
+                System.out.println("can't delete");
+            } finally {
+                i++;
+                Thread.sleep(200);
+            }
+        }
     }
 }

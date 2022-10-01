@@ -888,7 +888,8 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
                         }
                         docId += leafContext.docBase;
                         Document d = freshReader.document(docId);
-                        logger.debug("    About to delete docId " + docId + ", fromInputFile=" + d.get("fromInputFile") + " from FI and CS");
+                        String applicationDocId = d.get("contents#cid");
+                        System.out.println("    About to delete docId " + docId + ", fromInputFile=" + d.get("fromInputFile") + " " + applicationDocId  + " from FI and CS");
 
                         deleteFromForwardIndices(d);
 
@@ -904,7 +905,7 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
 
             // Finally, delete the documents from the Lucene index
             logger.debug("  Delete docs from Lucene index");
-            indexWriter.deleteDocuments(q);
+            //indexWriter.deleteDocuments(q);
 
         } catch (IOException e) {
             throw BlackLabRuntimeException.wrap(e);

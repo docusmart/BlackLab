@@ -414,6 +414,7 @@ public class SearchParameters {
         ConcordanceType concType = getString("usecontent").equals("orig") ? ConcordanceType.CONTENT_STORE
                 : ConcordanceType.FORWARD_INDEX;
         return new ContextSettings(contextSize, concType);
+        //return new ContextSettings(contextSize, ConcordanceType.FORWARD_INDEX);
     }
 
     public boolean includeGroupContents() {
