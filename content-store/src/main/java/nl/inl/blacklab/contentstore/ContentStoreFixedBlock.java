@@ -307,6 +307,7 @@ public abstract class ContentStoreFixedBlock extends ContentStoreDirAbstract {
                     freeBlocks.add(i);
             }
 
+
         } catch (IOException e) {
             throw BlackLabRuntimeException.wrap(e);
         }

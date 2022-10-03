@@ -23,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -85,6 +87,27 @@ public class ContentStoreFixedBlockReader extends ContentStoreFixedBlock {
         long fl = tocFile.length();
         tocFileChannel = tocRaf.getChannel();
         tocFileBuffer = tocFileChannel.map(MapMode.READ_ONLY, 0, fl);
+        System.out.println("file size in mb: " + tocRaf.length() / (1024 * 1024));
+        int offset = 1000 * 1024 * 1024;
+        int len = 100;
+        if (offset > fl) {
+            return;
+        }
+        while(offset < fl) {
+            byte[] res = new byte[len];
+            tocFileBuffer.position(offset);
+            tocFileBuffer.get(res, 0, len - 1);
+            for (byte b : res) {
+                if (b != 0) {
+                    System.out.println("found data at" + offset);
+                    break;
+                }
+            }
+            offset += len;
+        }
+        System.out.println("finish dumpiing");
+        tocFileBuffer.position(0);
+
     }
 
     /**

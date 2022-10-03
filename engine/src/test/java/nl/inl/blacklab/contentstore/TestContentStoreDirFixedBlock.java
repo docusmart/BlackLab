@@ -20,12 +20,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import nl.inl.blacklab.search.BlackLab;
 import nl.inl.blacklab.search.BlackLabIndexWriter;
@@ -39,6 +42,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.NoLockFactory;
 import org.apache.lucene.store.SimpleFSDirectory;
 import org.eclipse.collections.api.block.procedure.Procedure;
+import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -295,7 +299,34 @@ public class TestContentStoreDirFixedBlock {
         }
         System.out.println("Deleted: " + deleted);
         System.out.println("All: " + all);
+        compareToc(reader.toc);
         return reader;
+    }
+
+    public void compareToc( MutableIntObjectMap<ContentStoreFixedBlock.TocEntry> bad) {
+       Map<Integer, Integer> bIdToSize = new HashMap<>();
+       long deleted = 0;
+       long all = 0;
+       long space = 0;
+       long totalBlocks = 0;
+        for (ContentStoreFixedBlock.TocEntry next : bad) {
+            if (next.deleted) {
+                deleted += next.sizeBytes();
+            }
+            bIdToSize.put(next.id, next.blockIndices.length * 4 * 2);
+            all += next.sizeBytes();
+            space += next.blockIndices.length * 4 * 2;
+            // Keep track of the number of blocks
+            for (int bl : next.blockIndices) {
+                if (bl > totalBlocks - 1)
+                    totalBlocks = bl + 1;
+            }
+        }
+        System.out.println("Total entries: " + bad.size());
+        System.out.println("Total size of deleted entries in kb: " + deleted /(1024));
+        System.out.println("Total size of all entries in mb: " + all /(1024 * 1024));
+        System.out.println("Total block indices len of all entries in mb: " + space /(1024 * 1024));
+        System.out.println("Total blocks: " + totalBlocks);
     }
     public void doDelete(String indexDir) throws ErrorOpeningIndex, InterruptedException {
         BlackLabIndexWriter iWriter = BlackLab.openForWriting(new File(indexDir), false);
