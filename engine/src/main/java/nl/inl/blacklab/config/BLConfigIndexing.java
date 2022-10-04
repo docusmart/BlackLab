@@ -3,6 +3,10 @@ package nl.inl.blacklab.config;
 import nl.inl.blacklab.search.indexmetadata.MetadataFieldImpl;
 
 public class BLConfigIndexing {
+
+    /** Max tokens for a private user index, default 100M **/
+    private long userIndexMaxTokenCount = 100_000_000;
+
     boolean downloadAllowed = false;
     
     String downloadCacheDir = null;
@@ -80,4 +84,12 @@ public class BLConfigIndexing {
         this.maxNumberOfIndicesPerUser = maxNumberOfIndicesPerUser;
     }
 
+    @SuppressWarnings("unused")
+    public void setUserIndexMaxTokenCount(int maxTokenCount) {
+        this.userIndexMaxTokenCount = maxTokenCount;
+    }
+
+    public long getUserIndexMaxTokenCount() {
+        return this.userIndexMaxTokenCount;
+    }
 }
