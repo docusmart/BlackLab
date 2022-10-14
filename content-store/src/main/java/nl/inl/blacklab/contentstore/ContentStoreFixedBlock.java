@@ -259,7 +259,7 @@ public abstract class ContentStoreFixedBlock extends ContentStoreDirAbstract {
         }
     }
 
-    protected abstract void mapToc(boolean writable) throws IOException;
+    protected abstract void mapToc(boolean writable, boolean growBuffer) throws IOException;
 
     /**
      * Read the table of contents from the file
@@ -267,7 +267,7 @@ public abstract class ContentStoreFixedBlock extends ContentStoreDirAbstract {
     protected synchronized void readToc() {
         toc.clear();
         try {
-            mapToc(false);
+            mapToc(false, false);
             try {
                 ((Buffer)tocFileBuffer).position(0);
                 int n = tocFileBuffer.getInt();
