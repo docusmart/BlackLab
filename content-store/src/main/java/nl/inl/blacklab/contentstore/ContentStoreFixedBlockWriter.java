@@ -206,6 +206,9 @@ public class ContentStoreFixedBlockWriter extends ContentStoreFixedBlock {
     protected void mapToc(boolean writeable, boolean growBuffer) throws IOException {
         tocRaf = new RandomAccessFile(tocFile, writeable ? "rw" : "r");
         long fl = tocFile.length();
+        if (!writeable && growBuffer) {
+            throw new UnsupportedOperationException("Can not grow toc buffer in read mode");
+        }
         if (growBuffer || fl == 0) {
             fl += writeMapReserve;
         } // leave 1M room at the end
