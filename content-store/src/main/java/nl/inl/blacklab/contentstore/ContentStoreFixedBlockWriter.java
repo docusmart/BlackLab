@@ -206,13 +206,14 @@ public class ContentStoreFixedBlockWriter extends ContentStoreFixedBlock {
     protected void mapToc(boolean writeable, boolean growBuffer) throws IOException {
         tocRaf = new RandomAccessFile(tocFile, writeable ? "rw" : "r");
         long fl = tocFile.length();
-        if (growBuffer) {
+        if (growBuffer || fl == 0) {
             fl += writeMapReserve;
         } // leave 1M room at the end
         tocFileChannel = tocRaf.getChannel();
         tocFileBuffer = tocFileChannel.map(writeable ? MapMode.READ_WRITE : MapMode.READ_ONLY, 0, fl);
         double flsize = (double) fl / (1024 * 1024);
-        logger.debug("Memory mapping toc file={}, file size={}mb, toc size={}", tocFile.getAbsolutePath(), flsize, toc.size() );
+        double buffSize = (double) tocFileBuffer.capacity() / (1024 * 1024);
+        logger.debug("Memory mapping toc file={}, file size={}mb, buff size={}, toc size={}", tocFile.getAbsolutePath(), flsize, buffSize, toc.size() );
     }
 
 
