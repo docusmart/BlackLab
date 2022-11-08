@@ -152,12 +152,8 @@ public class RequestHandlerHits extends RequestHandler {
 
 
         WindowSettings windowSettings = searchParam.getWindowSettings();
-        int soFar = hits.hitsStats().processedSoFar();
-        if (!hits.hitsStats().processedAtLeast(windowSettings.first())) {
-            logger.info("Docs so far: {}", soFar);
-            logger.info("Window requested: {}", windowSettings.first());
+        if (!hits.hitsStats().processedAtLeast(windowSettings.first()))
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
-        }
 
         SearchCacheEntry<Hits> cacheEntryWindow = null;
         Hits window;
