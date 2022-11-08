@@ -145,7 +145,7 @@ public class ResultsCache implements SearchCache {
 
     public ResultsCache(BLSConfig config, ExecutorService threadPool)  {
         this.threadPool = threadPool;
-        int maxSearchTime = config.getCache().getMaxSearchTimeSec();
+        int maxSearchTimeSec = config.getCache().getMaxSearchTimeSec();
 
         CacheLoader<SearchInfoWrapper, SearchResult> cacheLoader = new CacheLoader<SearchInfoWrapper, SearchResult>() {
             @Override
@@ -161,8 +161,8 @@ public class ResultsCache implements SearchCache {
                 }));
                 try {
                     CacheEntryWithResults<? extends SearchResult> searchResult;
-                    if (maxSearchTime > 0) {
-                         searchResult = job.get(maxSearchTime * 1000, TimeUnit.MILLISECONDS);
+                    if (maxSearchTimeSec > 0) {
+                         searchResult = job.get((long)maxSearchTimeSec * 1000, TimeUnit.MILLISECONDS);
                     } else {
                          searchResult = job.get();
                     }
@@ -180,7 +180,7 @@ public class ResultsCache implements SearchCache {
 
         int maxSize = config.getCache().getMaxNumberOfJobs();
         logger.info("Creating cache with maxSize: {}", maxSize);
-        logger.info("Creating cache with max search time: {} sec", maxSearchTime);
+        logger.info("Creating cache with max search time: {} sec", maxSearchTimeSec);
         searchCache = Caffeine.newBuilder()
             .recordStats()
             .maximumSize(maxSize)
