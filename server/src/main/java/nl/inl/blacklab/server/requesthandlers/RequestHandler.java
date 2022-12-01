@@ -799,6 +799,10 @@ public abstract class RequestHandler {
                     .entry("actualWindowSize", window.windowSize())
                     .entry("windowHasPrevious", window.hasPrevious())
                     .entry("windowHasNext", window.hasNext());
+            // log debug all window stats
+            logger.debug("When request first: {}, size{}, Responding with window, first: {}, requested: {}, actual: {}, hasPrevious: {}, hasNext: {}",
+                    searchParam.getWindowSettings().first(), searchParam.getWindowSettings().size(), window.first(), window.requestedWindowSize(), window.windowSize(), window.hasPrevious(), window.hasNext());
+
         }
     }
 
