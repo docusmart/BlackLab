@@ -152,8 +152,12 @@ public class RequestHandlerHits extends RequestHandler {
 
 
         WindowSettings windowSettings = searchParam.getWindowSettings();
-        if (!hits.hitsStats().processedAtLeast(windowSettings.first()))
+        if (!hits.hitsStats().processedAtLeast(windowSettings.first())) {
+            logger.debug("EGZZZ request First: {}", windowSettings.first());
+            logger.debug("EGZZZ request Size: {}", windowSettings.size());
+            logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
+        }
 
         SearchCacheEntry<Hits> cacheEntryWindow = null;
         Hits window;

@@ -676,6 +676,9 @@ public abstract class Hits extends Results<Hit, HitProperty> {
             }
         });
         boolean hasNext = hitsProcessedAtLeast(first + windowSize + 1);
+        if (hasNext) {
+            logger.debug("EGZ More results: first={}, windondSize={}, number={}, size={}", first, windowSize, number, size());
+        }
         windowStats = new WindowStats(hasNext, first, windowSize, number);
         return Hits.fromList(queryInfo(), window, windowStats, null, hitsCounted, docsRetrieved.getValue(), docsRetrieved.getValue(), capturedGroups);
     }
