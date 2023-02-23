@@ -190,7 +190,11 @@ public class HitsFromQuery extends Hits {
     @Override
     public String toString() {
         HitsResultsContext hitsResultsContext = this.hitsResultsContext;
-        return "Hits#" + hitsObjId + " (fullyRead=" + hitsResultsContext.sourceSpansFullyRead + ", hitsSoFar=" + hitsResultsContext.hitsArrays.size() + ")";
+        String contextInfo = String.format("hitsCounted=%d, docsCounted=%d, docRetrieved=%d, hitArraySize=%d", hitsResultsContext.hitsCounted,
+            hitsResultsContext.docsCounted,
+            hitsResultsContext.docsRetrieved,
+            hitsResultsContext.hitsArrays.size());
+        return "Hits#" + hitsObjId + " (fullyRead=" + hitsResultsContext.sourceSpansFullyRead + ", hitsSoFar=" + hitsResultsContext.hitsArrays.size() + " " + contextInfo + ")";
     }
 
     /**

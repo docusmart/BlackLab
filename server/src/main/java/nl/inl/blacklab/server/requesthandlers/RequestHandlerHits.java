@@ -159,17 +159,17 @@ public class RequestHandlerHits extends RequestHandler {
             logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
 
             HitsFromQuery hq = (HitsFromQuery) hits;
+            logger.debug("EGZ hitsFromQuery={}", hq.toString());
             logger.debug("EGZZ hits result context id:{}", System.identityHashCode(hq.getHitsContext()));
             logger.debug("EGZZ hits array:{}", System.identityHashCode(hq.getHitsArrays()));
             logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
         }
-        if(!hits.hitsStats().done()) {
-            HitsFromQuery hq = (HitsFromQuery) hits;
-            logger.debug("EGZZ hits result context id:{}", System.identityHashCode(hq.getHitsContext()));
-            logger.debug("EGZZ hits array:{}", System.identityHashCode(hq.getHitsArrays()));
-            logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
-        }
+        HitsFromQuery hq = (HitsFromQuery) hits;
+        logger.debug("EGZ hitsFromQuery={}", hq.toString());
+        //logger.debug("EGZZ hits result context id:{}", System.identityHashCode(hq.getHitsContext()));
+        //logger.debug("EGZZ hits array:{}", System.identityHashCode(hq.getHitsArrays()));
+        //logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
 
         SearchCacheEntry<Hits> cacheEntryWindow = null;
         Hits window;
