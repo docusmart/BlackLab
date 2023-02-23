@@ -182,6 +182,7 @@ public class HitsFromQuery extends Hits {
             loggedSpans = false;
             atomicReaderContexts = reader.leaves();
             atomicReaderContextIndex = -1;
+            logger.debug("Created new hitsFromQuery with {}", this.toString());
         } catch (IOException e) {
             throw BlackLabRuntimeException.wrap(e);
         }
