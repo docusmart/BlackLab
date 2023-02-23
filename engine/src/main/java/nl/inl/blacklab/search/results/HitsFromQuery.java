@@ -401,7 +401,11 @@ public class HitsFromQuery extends Hits {
     }
 
     @Override
-    protected HitsArrays getHitsArrays() {
+    public HitsArrays getHitsArrays() {
         return this.hitsResultsContext.hitsArrays;
+    }
+
+    public HitsResultsContext getHitsContext() {
+        return this.hitsResultsContext;
     }
 }
