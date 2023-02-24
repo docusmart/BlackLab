@@ -14,6 +14,7 @@ import nl.inl.blacklab.search.results.HitsFromQuery;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -163,6 +164,12 @@ public class RequestHandlerHits extends RequestHandler {
             logger.debug("EGZZ hits result context id:{}", System.identityHashCode(hq.getHitsContext()));
             logger.debug("EGZZ hits array:{}", System.identityHashCode(hq.getHitsArrays()));
             logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
+            String reqIdFailed = ThreadContext.get("requestId");
+            if (!System.getProperties().contains("failedReqId")) {
+                System.setProperty("failedReqId", reqIdFailed);
+            } else {
+                logger.debug("EGZZ skip setting reqIdFailed, already found {}", reqIdFailed);
+            }
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
         }
         HitsFromQuery hq = (HitsFromQuery) hits;

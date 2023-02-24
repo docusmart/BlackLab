@@ -200,6 +200,12 @@ public class ResultsCache implements SearchCache {
     @Override
     public <T extends SearchResult> SearchCacheEntry<T> getAsync(final Search<T> search, final boolean allowQueue) {
         try {
+            String requestId = ThreadContext.get("requestId");
+            String failedReqId = System.getProperty("failedReqId");
+            if (System.getProperty("failedReqId") != null && requestId.equalsIgnoreCase(failedReqId)){
+                logger.debug("Trying to fetch a request with bad pages: {},  {}", requestId, failedReqId);
+                System.clearProperty("failedReqId");
+            }
             CompletableFuture<SearchResult> resultsFuture = searchCache.get(new SearchInfoWrapper(search, ThreadContext.get("requestId")));
             return new SearchCacheEntryFromFuture(resultsFuture, search);
         } catch (Exception ex) {
