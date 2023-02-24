@@ -14,6 +14,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.micrometer.core.instrument.Counter;
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
+import nl.inl.blacklab.searches.SearchHitsFromBLSpanQuery;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -155,9 +156,13 @@ public class ResultsCache implements SearchCache {
                 Future<CacheEntryWithResults<? extends SearchResult>> job = runningJobs.computeIfAbsent(searchWrapper.getSearch(), (search) -> ResultsCache.this.threadPool.submit(() -> {
                     ThreadContext.put("requestId", requestId);
                     final long startTime = System.currentTimeMillis();
-                    logger.debug("EGZZZZ---Starting search: {}", System.identityHashCode(search));
+                    if (search instanceof SearchHitsFromBLSpanQuery) {
+                        logger.debug("EGZZZZ---Starting search: {}", System.identityHashCode(search));
+                    }
                     SearchResult results = search.executeInternal(null);
-                    logger.debug("EGZZZ---Finished search: {}", System.identityHashCode(search));
+                    if (search instanceof SearchHitsFromBLSpanQuery) {
+                        logger.debug("EGZZZ---Finished search:  {}", System.identityHashCode(search));
+                    }
                     ThreadContext.remove("requestId");
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);
                 }));
