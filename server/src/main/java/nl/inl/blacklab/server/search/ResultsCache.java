@@ -155,7 +155,9 @@ public class ResultsCache implements SearchCache {
                 Future<CacheEntryWithResults<? extends SearchResult>> job = runningJobs.computeIfAbsent(searchWrapper.getSearch(), (search) -> ResultsCache.this.threadPool.submit(() -> {
                     ThreadContext.put("requestId", requestId);
                     final long startTime = System.currentTimeMillis();
+                    logger.debug("EGZZZZ---Starting search: {}", System.identityHashCode(search));
                     SearchResult results = search.executeInternal(null);
+                    logger.debug("EGZZZ---Finished search: {}", System.identityHashCode(search));
                     ThreadContext.remove("requestId");
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);
                 }));
