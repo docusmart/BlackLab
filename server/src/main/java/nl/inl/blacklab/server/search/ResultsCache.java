@@ -11,6 +11,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.micrometer.core.instrument.Counter;
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
@@ -202,11 +204,18 @@ public class ResultsCache implements SearchCache {
         try {
             String requestId = ThreadContext.get("requestId");
             String failedReqId = System.getProperty("failedReqId");
+            SearchInfoWrapper wrapper = new SearchInfoWrapper(search, requestId);
             if (System.getProperty("failedReqId") != null && requestId.equalsIgnoreCase(failedReqId)){
                 logger.debug("Trying to fetch a request with bad pages: {},  {}", requestId, failedReqId);
+                logger.debug("Contains search= {} -> {}", search.toString(), searchCache.asMap().containsKey(wrapper));
+                if (!searchCache.asMap().containsKey(wrapper)) {
+                    Stream<? extends Search<? extends SearchResult>> searchStream = searchCache.asMap().keySet().stream()
+                        .filter(k -> k.requestId.equalsIgnoreCase(requestId)).map(s -> s.getSearch());
+                    logger.debug("Since it does not contain the search, but it contians: {}", searchStream);
+                }
                 System.clearProperty("failedReqId");
             }
-            CompletableFuture<SearchResult> resultsFuture = searchCache.get(new SearchInfoWrapper(search, ThreadContext.get("requestId")));
+            CompletableFuture<SearchResult> resultsFuture = searchCache.get(wrapper);
             return new SearchCacheEntryFromFuture(resultsFuture, search);
         } catch (Exception ex) {
             throw BlackLabRuntimeException.wrap(ex);
