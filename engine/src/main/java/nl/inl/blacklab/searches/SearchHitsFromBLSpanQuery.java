@@ -70,7 +70,9 @@ public class SearchHitsFromBLSpanQuery extends SearchHits {
 
     @Override
     public String toString() {
-        return toString("hits", spanQuery);
+        //return toString("hits", spanQuery);
+        return String.format("hits=%s, spanQuery=%d, searchSettings=%d", SearchHitsFromBLSpanQuery.class.getName(), System.identityHashCode(spanQuery),
+            System.identityHashCode(searchSettings));
     }
 
     public BLSpanQuery query() {

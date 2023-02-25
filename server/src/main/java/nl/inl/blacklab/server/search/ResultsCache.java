@@ -205,7 +205,7 @@ public class ResultsCache implements SearchCache {
             String requestId = ThreadContext.get("requestId");
             String failedReqId = System.getProperty("failedReqId");
             SearchInfoWrapper wrapper = new SearchInfoWrapper(search, requestId);
-            if (System.getProperty("failedReqId") != null && requestId.equalsIgnoreCase(failedReqId)){
+            if (System.getProperty("failedReqId") != null && requestId.equalsIgnoreCase(failedReqId) && search instanceof SearchHitsFromBLSpanQuery){
                 logger.debug("Trying to fetch a request with bad pages: {},  {}", requestId, failedReqId);
                 logger.debug("Contains search= {} -> {}", search.toString(), searchCache.asMap().containsKey(wrapper));
                 if (!searchCache.asMap().containsKey(wrapper)) {

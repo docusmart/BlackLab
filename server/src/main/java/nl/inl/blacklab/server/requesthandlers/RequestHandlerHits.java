@@ -98,6 +98,7 @@ public class RequestHandlerHits extends RequestHandler {
 
         SearchCacheEntry<?> cacheEntry, cacheEntryDocsCount;
         Hits hits;
+        SearchHits searchHits = null;
         ResultsStats hitsStats = null; // [running] hits count
         ResultsStats docsStats = null; // [running] docs count
 
@@ -115,7 +116,7 @@ public class RequestHandlerHits extends RequestHandler {
             } else {
                 // Regular hits request.
                 // Create the search objects
-                SearchHits searchHits = searchParam.hitsSample();
+                searchHits = searchParam.hitsSample();
                 SearchCount searchHitCount = searchHits.hitCount();
                 SearchCount searchDocCount = searchHits.docCount();
                 // Start the search.
@@ -155,6 +156,7 @@ public class RequestHandlerHits extends RequestHandler {
 
         WindowSettings windowSettings = searchParam.getWindowSettings();
         if (!hits.hitsStats().processedAtLeast(windowSettings.first())) {
+            logger.debug("EGZZZ search that failed: {}", searchHits.toString());
             logger.debug("EGZZZ request First: {}", windowSettings.first());
             logger.debug("EGZZZ request Size: {}", windowSettings.size());
             logger.debug("EGZZ so far: {}", hits.hitsStats().processedSoFar());
