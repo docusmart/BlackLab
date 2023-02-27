@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 
 import nl.inl.blacklab.search.results.HitsFromQuery;
+import nl.inl.blacklab.searches.SearchHitsFromBLSpanQuery;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -121,6 +122,7 @@ public class RequestHandlerHits extends RequestHandler {
                 // Regular hits request.
                 // Create the search objects
                 searchHits = searchParam.hitsSample();
+                //SearchHitsFromBLSpanQuery
                 SearchCount searchHitCount = searchHits.hitCount();
                 SearchCount searchDocCount = searchHits.docCount();
                 // Start the search.

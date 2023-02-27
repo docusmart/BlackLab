@@ -159,11 +159,11 @@ public class ResultsCache implements SearchCache {
                     ThreadContext.put("requestId", requestId);
                     final long startTime = System.currentTimeMillis();
                     if (search instanceof SearchHitsFromBLSpanQuery) {
-                        logger.debug("EGZZZZ---Starting search: {}", System.identityHashCode(search));
+                        logger.debug("EGZZZZ---Starting search: {}, {}", search.toString(), System.identityHashCode(search));
                     }
                     SearchResult results = search.executeInternal(null);
                     if (search instanceof SearchHitsFromBLSpanQuery) {
-                        logger.debug("EGZZZ---Finished search:  {}", System.identityHashCode(search));
+                        logger.debug("EGZZZ---Finished search: {}  {}", search.toString(), System.identityHashCode(search));
                     }
                     ThreadContext.remove("requestId");
                     return new CacheEntryWithResults<>(results, System.currentTimeMillis() - startTime);

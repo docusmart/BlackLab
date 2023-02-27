@@ -28,6 +28,7 @@ public abstract class SearchForResults<R extends Results<?, ?>> extends Abstract
      * @return resulting operation
      */
     public SearchCount hitCount() {
+        // this = SearchHitsFromBLSpanQuery
         return new SearchCountFromResults<>(queryInfo(), this, CountType.HITS);
     }
 
