@@ -1,12 +1,15 @@
 package nl.inl.blacklab.server.requesthandlers;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -79,6 +82,7 @@ import nl.inl.blacklab.server.util.BlsUtils;
 public class RequestHandlerHits extends RequestHandler {
 
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
+    private static final Map<Pair<String, WindowSettings>, List<Hits>> windowDebug = new ConcurrentHashMap<>();
 
     public RequestHandlerHits(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
@@ -172,6 +176,12 @@ public class RequestHandlerHits extends RequestHandler {
             } else {
                 logger.debug("EGZZ skip setting reqIdFailed, already found {}", reqIdFailed);
             }
+            List<Hits> failedHits = windowDebug.get(Pair.of(reqIdFailed, searchParam.getWindowSettings()));
+            List<Pair<String, WindowSettings>> allFailedHits = windowDebug.keySet().stream()
+                .filter(k -> k.getLeft().contains(reqIdFailed)).collect(Collectors.toList());
+            Map<Pair<String, WindowSettings>, List<Hits>> filterDebug = new HashMap<>();
+            allFailedHits.forEach(i -> filterDebug.put(i, windowDebug.get(i)));
+            logger.debug("Window searches before failure: {}", filterDebug);
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
         }
         HitsFromQuery hq = (HitsFromQuery) hits;
@@ -217,6 +227,12 @@ public class RequestHandlerHits extends RequestHandler {
 
         ds.startMap();
 
+        String reqId = ThreadContext.get("requestId");
+        Pair<String, WindowSettings> key = Pair.of(reqId, searchParam.getWindowSettings());
+        List<Hits> logWindow = windowDebug.getOrDefault(key, new ArrayList<>());
+        logWindow.add(hits);
+        logWindow.add(window);
+        windowDebug.put(key, logWindow);
         // The summary
         ds.startEntry("summary").startMap();
         // Search time should be time user (originally) had to wait for the response to this request.
