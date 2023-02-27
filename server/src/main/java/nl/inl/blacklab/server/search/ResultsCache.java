@@ -257,4 +257,9 @@ public class ResultsCache implements SearchCache {
     public List<Map<String, Object>> getCacheContent(boolean includeDebugInfo) {
         return null;
     }
+
+    public <T extends SearchResult>  boolean containsSearch(Search<T> search, String requestId){
+        SearchInfoWrapper wrapper = new SearchInfoWrapper(search, requestId);
+        return searchCache.asMap().containsKey(wrapper);
+    }
 }

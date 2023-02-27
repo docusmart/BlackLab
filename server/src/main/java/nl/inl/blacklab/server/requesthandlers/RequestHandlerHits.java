@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import nl.inl.blacklab.search.results.HitsFromQuery;
 import nl.inl.blacklab.searches.SearchHitsFromBLSpanQuery;
+import nl.inl.blacklab.server.search.ResultsCache;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -184,6 +185,16 @@ public class RequestHandlerHits extends RequestHandler {
             Map<Pair<String, WindowSettings>, List<SearchHits>> filterDebug = new HashMap<>();
             allFailedHits.forEach(i -> filterDebug.put(i, windowDebug.get(i)));
             logger.debug("Window searches before failure: {}", filterDebug);
+            List<SearchHits> arrHits = new ArrayList<>();
+            filterDebug.values().forEach(arrHits::addAll);
+            Set<SearchHits> setHists = new HashSet<>();
+            arrHits.forEach(v -> setHists.add((SearchHits) v));
+
+            ResultsCache blackLabCache = (ResultsCache) this.searchMan.getBlackLabCache();
+            for (SearchHits i : arrHits) {
+               logger.debug("In cache: {} -> {}", i.toString(), blackLabCache.containsSearch(i, reqIdFailed)) ;
+            }
+
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
         }
         HitsFromQuery hq = (HitsFromQuery) hits;
