@@ -83,7 +83,7 @@ import nl.inl.blacklab.server.util.BlsUtils;
 public class RequestHandlerHits extends RequestHandler {
 
     private static final Logger logger = LogManager.getLogger(RequestHandlerHits.class);
-    private static final Map<Pair<String, WindowSettings>, List<Hits>> windowDebug = new ConcurrentHashMap<>();
+    private static final Map<Pair<String, WindowSettings>, List<SearchHits>> windowDebug = new ConcurrentHashMap<>();
 
     public RequestHandlerHits(BlackLabServer servlet, HttpServletRequest request, User user, String indexName,
             String urlResource, String urlPathPart) {
@@ -161,7 +161,7 @@ public class RequestHandlerHits extends RequestHandler {
 
 
         WindowSettings windowSettings = searchParam.getWindowSettings();
-        addToDebug(hits);
+        addToDebug(searchHits);
         if (!hits.hitsStats().processedAtLeast(windowSettings.first())) {
             logger.debug("EGZZZ search that failed: {}", searchHits.toString());
             logger.debug("EGZZZ request First: {}", windowSettings.first());
@@ -179,10 +179,9 @@ public class RequestHandlerHits extends RequestHandler {
             } else {
                 logger.debug("EGZZ skip setting reqIdFailed, already found {}", reqIdFailed);
             }
-            List<Hits> failedHits = windowDebug.get(Pair.of(reqIdFailed, searchParam.getWindowSettings()));
             List<Pair<String, WindowSettings>> allFailedHits = windowDebug.keySet().stream()
                 .filter(k -> k.getLeft().contains(reqIdFailed)).collect(Collectors.toList());
-            Map<Pair<String, WindowSettings>, List<Hits>> filterDebug = new HashMap<>();
+            Map<Pair<String, WindowSettings>, List<SearchHits>> filterDebug = new HashMap<>();
             allFailedHits.forEach(i -> filterDebug.put(i, windowDebug.get(i)));
             logger.debug("Window searches before failure: {}", filterDebug);
             throw new BadRequest("HIT_NUMBER_OUT_OF_RANGE", "Non-existent hit number specified.");
@@ -231,7 +230,7 @@ public class RequestHandlerHits extends RequestHandler {
         ds.startMap();
 
         // The summary
-        addToDebug(window);
+        //addToDebug(window);
         ds.startEntry("summary").startMap();
         // Search time should be time user (originally) had to wait for the response to this request.
         // Count time is the time it took (or is taking) to iterate through all the results to count the total.
@@ -459,10 +458,10 @@ public class RequestHandlerHits extends RequestHandler {
         return Pair.of(jobHitGroups, hits);
     }
 
-    private void addToDebug(Hits hit) {
+    private void addToDebug(SearchHits hit) {
         String reqId = ThreadContext.get("requestId");
         Pair<String, WindowSettings> key = Pair.of(reqId, searchParam.getWindowSettings());
-        List<Hits> logWindow = windowDebug.getOrDefault(key, new ArrayList<>());
+        List<SearchHits> logWindow = windowDebug.getOrDefault(key, new ArrayList<>());
         logWindow.add(hit);
         windowDebug.put(key, logWindow);
     }
