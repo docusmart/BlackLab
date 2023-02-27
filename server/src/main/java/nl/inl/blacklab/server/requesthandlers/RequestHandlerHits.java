@@ -159,6 +159,7 @@ public class RequestHandlerHits extends RequestHandler {
 
 
         WindowSettings windowSettings = searchParam.getWindowSettings();
+        addToDebug(hits);
         if (!hits.hitsStats().processedAtLeast(windowSettings.first())) {
             logger.debug("EGZZZ search that failed: {}", searchHits.toString());
             logger.debug("EGZZZ request First: {}", windowSettings.first());
@@ -227,13 +228,8 @@ public class RequestHandlerHits extends RequestHandler {
 
         ds.startMap();
 
-        String reqId = ThreadContext.get("requestId");
-        Pair<String, WindowSettings> key = Pair.of(reqId, searchParam.getWindowSettings());
-        List<Hits> logWindow = windowDebug.getOrDefault(key, new ArrayList<>());
-        logWindow.add(hits);
-        logWindow.add(window);
-        windowDebug.put(key, logWindow);
         // The summary
+        addToDebug(window);
         ds.startEntry("summary").startMap();
         // Search time should be time user (originally) had to wait for the response to this request.
         // Count time is the time it took (or is taking) to iterate through all the results to count the total.
@@ -459,5 +455,13 @@ public class RequestHandlerHits extends RequestHandler {
             hits = hits.sort(sortProp);
 
         return Pair.of(jobHitGroups, hits);
+    }
+
+    private void addToDebug(Hits hit) {
+        String reqId = ThreadContext.get("requestId");
+        Pair<String, WindowSettings> key = Pair.of(reqId, searchParam.getWindowSettings());
+        List<Hits> logWindow = windowDebug.getOrDefault(key, new ArrayList<>());
+        logWindow.add(hit);
+        windowDebug.put(key, logWindow);
     }
 }
