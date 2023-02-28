@@ -14,6 +14,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import io.micrometer.core.instrument.Counter;
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
 import nl.inl.blacklab.searches.SearchHitsFromBLSpanQuery;
@@ -187,6 +189,15 @@ public class ResultsCache implements SearchCache {
             }
         };
 
+        RemovalListener removalListener = new RemovalListener() {
+            @Override
+            public void onRemoval(@Nullable Object key, @Nullable Object value, RemovalCause cause) {
+               logger.debug("*****EGZ Removing: {}, {} {}", key, value, cause.name()) ;
+            }
+        };
+
+
+
         int maxSize = config.getCache().getMaxNumberOfJobs();
         logger.info("Creating cache with maxSize: {}", maxSize);
         logger.info("Creating cache with max search time: {} sec", maxSearchTimeSec);
@@ -195,6 +206,7 @@ public class ResultsCache implements SearchCache {
             .maximumSize(maxSize)
             .initialCapacity(maxSize / 10)
             .executor(this.threadPool)
+            .evictionListener(removalListener)
             .buildAsync(cacheLoader);
         CaffeineCacheMetrics.monitor(Metrics.globalRegistry, searchCache, CACHE_NAME_FOR_METRICS);
         Metrics.globalRegistry.gaugeMapSize("blacklab-job-queue", Tags.empty(), runningJobs);
