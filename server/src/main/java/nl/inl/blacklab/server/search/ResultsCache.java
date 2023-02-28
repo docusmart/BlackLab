@@ -192,7 +192,8 @@ public class ResultsCache implements SearchCache {
         RemovalListener removalListener = new RemovalListener() {
             @Override
             public void onRemoval(@Nullable Object key, @Nullable Object value, RemovalCause cause) {
-               logger.debug("*****EGZ Removing: {}, {} {}", key, value, cause.name()) ;
+                SearchInfoWrapper wrapper = (SearchInfoWrapper) key;
+                logger.debug("*****EGZ Removing: {}, {} {}", wrapper.getSearch(), value, cause.name()) ;
             }
         };
 
