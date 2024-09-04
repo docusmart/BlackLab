@@ -34,7 +34,7 @@ public class ExportMetadata implements AutoCloseable {
     }
 
     public static void main(String[] args) throws ErrorOpeningIndex, FileNotFoundException {
-        LogUtil.setupBasicLoggingConfig(Level.DEBUG);
+        LogUtil.setupBasicLoggingConfig();
 
         if (args.length != 2) {
             System.out.println("Usage: ExportMetadata <indexDir> <exportFile>");

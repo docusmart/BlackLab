@@ -41,7 +41,7 @@ public class CountTokens {
     }
 
     public static void main(String[] args) throws ErrorOpeningIndex {
-        LogUtil.setupBasicLoggingConfig(Level.DEBUG);
+        LogUtil.setupBasicLoggingConfig();
 
         if (args.length != 1) {
             System.out.println("Usage: CountTokens <indexDir>");
