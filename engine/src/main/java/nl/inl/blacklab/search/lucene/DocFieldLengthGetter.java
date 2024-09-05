@@ -76,7 +76,7 @@ class DocFieldLengthGetter implements Closeable {
                 if (cachedFieldLengths == null) {
                     // Use UninvertingReader to simulate DocValues (slower)
                     Map<String, UninvertingReader.Type> fields = new TreeMap<>();
-                    fields.put(lengthTokensFieldName, UninvertingReader.Type.INTEGER);
+                    fields.put(lengthTokensFieldName, UninvertingReader.Type.INTEGER_POINT);
                     @SuppressWarnings("resource")
                     UninvertingReader uninv = new UninvertingReader(reader, fields);
                     cachedFieldLengths = uninv.getNumericDocValues(lengthTokensFieldName);

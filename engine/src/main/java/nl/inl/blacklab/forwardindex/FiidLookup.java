@@ -51,7 +51,7 @@ public class FiidLookup {
                 if (numericDocValues == null) {
                     // Use UninvertingReader to simulate DocValues (slower)
                     Map<String, UninvertingReader.Type> fields = new TreeMap<>();
-                    fields.put(fiidFieldName, UninvertingReader.Type.INTEGER);
+                    fields.put(fiidFieldName, UninvertingReader.Type.INTEGER_POINT);
                     @SuppressWarnings("resource")
                     UninvertingReader uninv = new UninvertingReader(r, fields);
                     numericDocValues = uninv.getNumericDocValues(fiidFieldName);

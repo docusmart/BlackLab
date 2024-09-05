@@ -75,7 +75,7 @@ public class DocPropertyAnnotatedFieldLength extends DocProperty {
                 if (numericDocValues == null) {
                     // Use UninvertingReader to simulate DocValues (slower)
                     Map<String, UninvertingReader.Type> fields = new TreeMap<>();
-                    fields.put(fieldName, UninvertingReader.Type.INTEGER);
+                    fields.put(fieldName, UninvertingReader.Type.INTEGER_POINT);
                     @SuppressWarnings("resource")
                     UninvertingReader uninv = new UninvertingReader(r, fields);
                     numericDocValues = uninv.getNumericDocValues(fieldName);
