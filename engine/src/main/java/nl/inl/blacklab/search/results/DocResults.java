@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.index.DocValues;
+import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.search.DocIdSetIterator;
@@ -35,6 +36,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.SimpleCollector;
 import org.apache.lucene.search.Weight;
+import org.apache.lucene.util.Bits;
 
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
 import nl.inl.blacklab.exceptions.InterruptedSearch;
@@ -551,18 +553,25 @@ public class DocResults extends ResultsList<DocResult, DocProperty> implements R
                     numberOfTokens = countTokens ? 0 : -1;
                     numberOfDocuments = 0;
                     Weight weight = queryInfo().index().searcher().createNormalizedWeight(query, false);
+                    String tokenLengthField = queryInfo().field().tokenLengthField();
                     for (LeafReaderContext r: queryInfo().index().reader().leaves()) {
+                        LeafReader reader = r.reader();
+                        Bits liveDocs = reader.getLiveDocs();
                         Scorer scorer = weight.scorer(r);
                         if (scorer != null) {
                             DocIdSetIterator it = scorer.iterator();
-                            NumericDocValues tokenLengthValues = countTokens ? DocValues.getNumeric(r.reader(), queryInfo().index().mainAnnotatedField().tokenLengthField()) : null;
+                            NumericDocValues tokenLengthValues = countTokens ? DocValues.getNumeric(reader, tokenLengthField) : null;
                             while (true) {
                                 int docId = it.nextDoc();
                                 if (docId == DocIdSetIterator.NO_MORE_DOCS)
                                     break;
-                                numberOfDocuments++;
-                                if (countTokens)
-                                    numberOfTokens += tokenLengthValues.get(docId) - BlackLabIndex.IGNORE_EXTRA_CLOSING_TOKEN;
+                                if (liveDocs == null || liveDocs.get(docId)) {
+                                    numberOfDocuments++;
+                                    if (countTokens) {
+                                        tokenLengthValues.advanceExact(docId);
+                                        numberOfTokens += tokenLengthValues.longValue() - BlackLabIndex.IGNORE_EXTRA_CLOSING_TOKEN;
+                                    }
+                                }
                             }
                         }
                     }

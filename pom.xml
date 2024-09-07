@@ -34,10 +34,10 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <doclint>none</doclint>
-        <blacklab.luceneVersion>5.5.5</blacklab.luceneVersion>
+        <blacklab.luceneVersion>7.1.0</blacklab.luceneVersion>
         <blacklab.version>${project.version}</blacklab.version>
         <log4j.version>2.17.1</log4j.version>
-        <jackson.version>2.11.1</jackson.version>
+        <jackson.version>2.15.0</jackson.version>
         <eclipse.collections.version>7.1.0</eclipse.collections.version>
         <maven.compiler.source>9</maven.compiler.source>
         <maven.compiler.target>9</maven.compiler.target>

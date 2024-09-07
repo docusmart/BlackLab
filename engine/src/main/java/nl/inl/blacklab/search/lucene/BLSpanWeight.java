@@ -18,7 +18,14 @@ public abstract class BLSpanWeight extends SpanWeight {
 
     public BLSpanWeight(SpanQuery query, IndexSearcher searcher, Map<Term, TermContext> termContexts)
             throws IOException {
-        super(query, searcher, termContexts);
+
+        // NOTE (chun.yu): About the 1.0f. I added this while upgrading the Lucene version for security.
+        //
+        // This constructor argument was added in Lucene 7.0 without much documentation. It appears to be
+        // a multiplier to be applied onto some scores. INL/Blacklab opted to have the BLSpanWeight constructor take a
+        // boost argument as well, allowing callers to specify. However, as of September 2024, the only concrete number used
+        // is 1.0f, so I'm hardcoding here to keep my upgrade simple and avoid modifying another ~20 files.
+        super(query, searcher, termContexts, 1.0f);
     }
 
     @Override

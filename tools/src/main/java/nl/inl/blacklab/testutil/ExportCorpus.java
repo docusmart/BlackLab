@@ -20,7 +20,7 @@ import nl.inl.util.LogUtil;
 public class ExportCorpus implements AutoCloseable {
 
     public static void main(String[] args) throws ErrorOpeningIndex {
-        LogUtil.setupBasicLoggingConfig(Level.DEBUG);
+        LogUtil.setupBasicLoggingConfig();
 
         if (args.length != 2) {
             System.out.println("Usage: ExportCorpus <indexDir> <exportDir>");
