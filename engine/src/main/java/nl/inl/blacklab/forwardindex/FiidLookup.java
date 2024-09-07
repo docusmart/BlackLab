@@ -2,6 +2,7 @@ package nl.inl.blacklab.forwardindex;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +39,10 @@ public class FiidLookup {
     private String fiidFieldName;
 
     /** The DocValues per segment (keyed by docBase) */
-    private Map<Integer, NumericDocValues> cachedFiids;
+    private Map<Integer, NumericDocValues> cachedFiids = new TreeMap<>();
+
+    /** Any cached mappings from Lucene docId to forward index id (fiid) or null if not using cache */
+    private final Map<Integer, Long> docIdToFiidCache = new HashMap<>();
 
     public FiidLookup(IndexReader reader, Annotation annotation) {
         this.fiidFieldName = annotation.forwardIndexIdField();
@@ -75,36 +79,41 @@ public class FiidLookup {
     }
 
     public int get(int docId) {
-        if (cachedFiids != null) {
-            // Find the fiid in the correct segment
-            Entry<Integer, NumericDocValues> prev = null;
-            for (Entry<Integer, NumericDocValues> e : cachedFiids.entrySet()) {
-                Integer docBase = e.getKey();
-                if (docBase > docId) {
-                    // Previous segment (the highest docBase lower than docId) is the right one
-                    Integer prevDocBase = prev.getKey();
-                    NumericDocValues prevDocValues = prev.getValue();
-                    synchronized (prevDocValues) {
-                        return (int) prevDocValues.get(docId - prevDocBase);
-                    }
-                }
-                prev = e;
-            }
-            // Last segment is the right one
-            Integer prevDocBase = prev.getKey();
-            NumericDocValues prevDocValues = prev.getValue();
-            synchronized (prevDocValues) {
-                return (int) prevDocValues.get(docId - prevDocBase);
-            }
+        // Is the fiid in the cache (if we have one)?
+        Long fiid = docIdToFiidCache.get(docId);
+        if (fiid != null)
+        {
+            // Yes; return value from the cache.
+            return (int)(long)fiid;
         }
+
+        // Find the fiid in the correct segment
+        Entry<Integer, NumericDocValues> prev = null;
+        for (Entry<Integer, NumericDocValues> e : cachedFiids.entrySet()) {
+            Integer docBase = e.getKey();
+            if (docBase > docId) {
+                // Previous segment (the highest docBase lower than docId) is the right one
+                Integer prevDocBase = prev.getKey();
+                NumericDocValues prevDocValues = prev.getValue();
+                return getFiidFromDocValues(prevDocBase, prevDocValues, docId);
+            }
+            prev = e;
+        }
+        
+        // Last segment is the right one
+        assert prev != null;
+        Integer prevDocBase = prev.getKey();
+        NumericDocValues prevDocValues = prev.getValue();
+        return getFiidFromDocValues(prevDocBase, prevDocValues, docId);
 
         // Not cached; find fiid by reading stored value from Document now
-        try {
-            return (int)Long.parseLong(reader.document(docId).get(fiidFieldName));
-        } catch (IOException e) {
-            throw BlackLabRuntimeException.wrap(e);
-        }
-
+        // INL/Blacklab removed this, seems convinced that this would never happen, but I'm not sure if that's true for us
+        // 
+        // try {
+        //     return (int)Long.parseLong(reader.document(docId).get(fiidFieldName));
+        // } catch (IOException e) {
+        //     throw BlackLabRuntimeException.wrap(e);
+        // }
     }
 
     public boolean hasFiids(int numToCheck) {
@@ -128,5 +137,38 @@ public class FiidLookup {
             fiidLookups.add(annotation == null ? null : new FiidLookup(reader, annotation));
         }
         return fiidLookups;
+    }
+
+    /**
+     * Get the requested forward index id from the DocValues object.
+     *
+     * Optionally caches any skipped values for later.
+     *
+     * @param docBase doc base for this segement
+     * @param docValues doc values for this segment
+     * @param docId document to get the fiid for
+     * @return forward index id
+     */
+    private int getFiidFromDocValues(int docBase, NumericDocValues docValues, int docId) {
+        try {
+            if (docIdToFiidCache == null) {
+                // Not caching (because we know our docIds are always increasing)
+                docValues.advanceExact(docId - docBase);
+                return (int) docValues.longValue();
+            } else {
+                // Caching; gather all fiid values in our cache until we find the requested one.
+                do {
+                    docValues.nextDoc();
+                    docIdToFiidCache.put(docValues.docID() + docBase, docValues.longValue());
+                    if (docValues.docID() == docId - docBase) {
+                        // Requested docvalue found.
+                        return (int) docValues.longValue();
+                    }
+                } while (docValues.docID() <= docId - docBase);
+                throw new BlackLabRuntimeException("not found in docvalues");
+            }
+        } catch (IOException e1) {
+            throw BlackLabRuntimeException.wrap(e1);
+        }
     }
 }

@@ -16,7 +16,6 @@
 package nl.inl.blacklab.resultproperty;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +34,6 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.util.BytesRef;
 
 import nl.inl.blacklab.exceptions.BlackLabRuntimeException;
 import nl.inl.blacklab.search.BlackLabIndex;
@@ -43,7 +41,11 @@ import nl.inl.blacklab.search.BlackLabIndexImpl;
 import nl.inl.blacklab.search.indexmetadata.FieldType;
 import nl.inl.blacklab.search.indexmetadata.MetadataField;
 import nl.inl.blacklab.search.results.DocResult;
+import nl.inl.util.DocValuesUtil;
 import nl.inl.util.LuceneUtil;
+import nl.inl.util.NumericDocValuesCacher;
+import nl.inl.util.SortedDocValuesCacher;
+import nl.inl.util.SortedSetDocValuesCacher;
 import nl.inl.util.StringUtil;
 
 /**
@@ -65,9 +67,9 @@ public class DocPropertyStoredField extends DocProperty {
     private String friendlyName;
 
     /** The DocValues per segment (keyed by docBase), or null if we don't have docValues. New indexes all have SortedSetDocValues, but some very old indexes may still contain regular SortedDocValues! */
-    private Map<Integer, Pair<SortedDocValues, SortedSetDocValues>> docValues = null;
+    private Map<Integer, Pair<SortedDocValuesCacher, SortedSetDocValuesCacher>> docValues = null;
     /** Null unless the field is numeric. */
-    private Map<Integer, NumericDocValues> numericDocValues = null;
+    private Map<Integer, NumericDocValuesCacher> numericDocValues = null;
 
     /** Our index */
     private BlackLabIndex index;
@@ -96,7 +98,7 @@ public class DocPropertyStoredField extends DocProperty {
                         LeafReader r = rc.reader();
                         // NOTE: can be null! This is valid and indicates the documents in this segment does not contain any values for this field.
                         NumericDocValues values = r.getNumericDocValues(fieldName);
-                        numericDocValues.put(rc.docBase, values);
+                        numericDocValues.put(rc.docBase, DocValuesUtil.cacher(values));
                     }
                 } else { // regular string doc values.
                     docValues = new TreeMap<>();
@@ -106,7 +108,7 @@ public class DocPropertyStoredField extends DocProperty {
                         SortedSetDocValues sortedSetDocValues = r.getSortedSetDocValues(fieldName);
                         SortedDocValues sortedDocValues = r.getSortedDocValues(fieldName);
                         if (sortedSetDocValues != null || sortedDocValues != null) {
-                            docValues.put(rc.docBase, Pair.of(sortedDocValues, sortedSetDocValues));
+                            docValues.put(rc.docBase, Pair.of(DocValuesUtil.cacher(sortedDocValues), DocValuesUtil.cacher(sortedSetDocValues)));
                         } else {
                             docValues.put(rc.docBase, null);
                         }
@@ -132,42 +134,38 @@ public class DocPropertyStoredField extends DocProperty {
     public String[] get(int docId) {
         if  (docValues != null) {
             // Find the fiid in the correct segment
-            Entry<Integer, Pair<SortedDocValues, SortedSetDocValues>> target = null;
-            for (Entry<Integer, Pair<SortedDocValues, SortedSetDocValues>> e : this.docValues.entrySet()) {
+            Entry<Integer, Pair<SortedDocValuesCacher, SortedSetDocValuesCacher>> target = null;
+            for (Entry<Integer, Pair<SortedDocValuesCacher, SortedSetDocValuesCacher>> e : this.docValues.entrySet()) {
                 if (e.getKey() > docId) { break; }
                 target = e;
             }
 
-            final List<String> ret = new ArrayList<>();
+            String[] ret = new String[0];
             if (target != null) {
                 final Integer targetDocBase = target.getKey();
-                final Pair<SortedDocValues, SortedSetDocValues> targetDocValues = target.getValue();
+                final Pair<SortedDocValuesCacher, SortedSetDocValuesCacher> targetDocValues = target.getValue();
                 if (targetDocValues != null) {
-                    SortedDocValues a = targetDocValues.getLeft();
-                    SortedSetDocValues b = targetDocValues.getRight();
+                    SortedDocValuesCacher a = targetDocValues.getLeft();
+                    SortedSetDocValuesCacher b = targetDocValues.getRight();
                     if (a != null) { // old index, only one value
                         synchronized (a) { // SortedDocValues is not thread-safe
-                            BytesRef val = a.get(docId - targetDocBase);
-                            ret.add(new String(val.bytes, val.offset, val.length, StandardCharsets.UTF_8));
+                            String value = a.get(docId - targetDocBase);
+                            ret = value == null ? new String[0] : new String[] { value };
                         }
                     } else { // newer index, (possibly) multiple values.
                         synchronized (b) { // SortedSetDocValues is not thread-safe
-                            b.setDocument(docId - targetDocBase);
-                            for (long ord = b.nextOrd(); ord != SortedSetDocValues.NO_MORE_ORDS; ord = b.nextOrd()) {
-                                BytesRef val = b.lookupOrd(ord);
-                                ret.add(new String(val.bytes, val.offset, val.length, StandardCharsets.UTF_8));
-                            }
+                            ret = b.get(docId - targetDocBase);
                         }
                     }
                 }
                 // If no docvalues for this segment - no values were indexed for this field (in this segment).
                 // So returning the empty array is good.
             }
-            return ret.toArray(new String[ret.size()]);
+            return ret;
         } else if (numericDocValues != null) {
             // Find the fiid in the correct segment
-            Entry<Integer, NumericDocValues> target = null;
-            for (Entry<Integer, NumericDocValues> e : this.numericDocValues.entrySet()) {
+            Entry<Integer, NumericDocValuesCacher> target = null;
+            for (Entry<Integer, NumericDocValuesCacher> e : this.numericDocValues.entrySet()) {
                 if (e.getKey() > docId) { break; }
                 target = e;
             }
@@ -175,7 +173,7 @@ public class DocPropertyStoredField extends DocProperty {
             final List<String> ret = new ArrayList<>();
             if (target != null) {
                 final Integer targetDocBase = target.getKey();
-                final NumericDocValues targetDocValues = target.getValue();
+                final NumericDocValuesCacher targetDocValues = target.getValue();
                 if (targetDocValues != null) {
                     synchronized (targetDocValues) {
                         ret.add(Long.toString(targetDocValues.get(docId - targetDocBase)));
@@ -184,7 +182,7 @@ public class DocPropertyStoredField extends DocProperty {
                 // If no docvalues for this segment - no values were indexed for this field (in this segment).
                 // So returning the empty array is good.
             }
-            return ret.toArray(new String[ret.size()]);
+            return ret.toArray(new String[0]);
         }
 
         // We don't have DocValues; just get the property from the document.
