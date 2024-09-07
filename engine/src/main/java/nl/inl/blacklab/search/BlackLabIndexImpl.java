@@ -567,7 +567,7 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
             indexWriter = openIndexWriter(indexDir, createNewIndex, null);
             if (traceIndexOpening)
                 logger.debug("  Opening corresponding IndexReader...");
-            reader = DirectoryReader.open(indexWriter, false);
+            reader = DirectoryReader.open(indexWriter, false, false);
         } else {
             // Open Lucene index
             if (traceIndexOpening)
@@ -611,7 +611,7 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
             indexWriter = openIndexWriter(indexDir, createNewIndex, analyzer);
             if (traceIndexOpening)
                 logger.debug("  IndexReader too...");
-            reader = DirectoryReader.open(indexWriter, false);
+            reader = DirectoryReader.open(indexWriter, false, false);
         }
 
         // Register ourselves in the mapping from IndexReader to BlackLabIndex,
@@ -861,7 +861,7 @@ public class BlackLabIndexImpl implements BlackLabIndexWriter {
         int deletedCount = 0;
         try {
             // Open a fresh reader to execute the query
-            try (IndexReader freshReader = DirectoryReader.open(indexWriter, false)) {
+            try (IndexReader freshReader = DirectoryReader.open(indexWriter, false, false)) {
                 // Execute the query, iterate over the docs and delete from FI and CS.
                 IndexSearcher s = new IndexSearcher(freshReader);
                 Weight w = s.createNormalizedWeight(q, false);
